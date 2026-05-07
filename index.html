@@ -164,6 +164,12 @@
             const totalWater = todayMetrics.waterLogs.reduce((sum, amt) => sum + amt, 0);
             const totalCals = todayMetrics.food.reduce((sum, item) => sum + item.cals, 0);
 
+            // Fetch checked status (fallback to all checked if it was an older completed day)
+            let checkedTasks = todayMetrics.checkedTasks;
+            if (!checkedTasks) {
+                checkedTasks = state.tasks.map(() => isAlreadyCompleted);
+            }
+
             root.innerHTML = `
                 <div class="pt-8">
                     <button onclick="nav('grid')" class="text-slate-500 text-[10px] font-black uppercase mb-8 tracking-[0.2em] hover:text-white transition">← Back to Grid</button>
@@ -226,7 +232,7 @@
                         <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Non-Negotiables</h3>
                         ${state.tasks.map((t, i) => `
                             <div class="bg-white/5 p-4 rounded-2xl flex items-center gap-4 border border-white/5">
-                                <input type="checkbox" id="task-${i}" ${isAlreadyCompleted ? 'checked' : ''} class="daily-check w-6 h-6 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0 cursor-pointer">
+                                <input type="checkbox" id="task-${i}" ${checkedTasks[i] ? 'checked' : ''} onchange="toggleTask(${i}, this.checked)" class="daily-check w-6 h-6 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0 cursor-pointer">
                                 <label for="task-${i}" class="text-sm font-bold text-white cursor-pointer select-none">${t}</label>
                             </div>
                         `).join('')}
@@ -255,41 +261,41 @@
         // Metrics Handlers
         function ensureMetricsExist() {
             if (!state.metrics[state.viewingDay]) {
-                state.metrics[state.viewingDay] = { waterLogs: [], food: [] };
+                state.metrics[state.viewingDay] = { waterLogs: [], food: [], checkedTasks: [] };
+            }
+            if (!state.metrics[state.viewingDay].checkedTasks) {
+                const isAlreadyCompleted = state.completedDays.includes(state.viewingDay);
+                state.metrics[state.viewingDay].checkedTasks = state.tasks.map(() => isAlreadyCompleted);
             }
             
-            // Migration script for old food entries
+            // Migrations
             if (state.metrics[state.viewingDay].cals !== undefined && !state.metrics[state.viewingDay].food) {
                 let oldCals = parseInt(state.metrics[state.viewingDay].cals) || 0;
                 state.metrics[state.viewingDay].food = oldCals > 0 ? [{name: "Old Entry", cals: oldCals}] : [];
                 delete state.metrics[state.viewingDay].cals;
             }
-            
-            // Migration script for old water entries (converts Liters to ml)
             if (state.metrics[state.viewingDay].water !== undefined && !state.metrics[state.viewingDay].waterLogs) {
                 let oldWater = parseFloat(state.metrics[state.viewingDay].water) || 0;
-                // If it looks like Liters (less than 20), multiply by 1000
-                if (oldWater > 0 && oldWater < 20) {
-                    oldWater = Math.round(oldWater * 1000);
-                }
+                if (oldWater > 0 && oldWater < 20) oldWater = Math.round(oldWater * 1000);
                 state.metrics[state.viewingDay].waterLogs = oldWater > 0 ? [oldWater] : [];
                 delete state.metrics[state.viewingDay].water;
             }
 
-            // Fallback to ensure arrays exist
             if (!state.metrics[state.viewingDay].waterLogs) state.metrics[state.viewingDay].waterLogs = [];
             if (!state.metrics[state.viewingDay].food) state.metrics[state.viewingDay].food = [];
+        }
+
+        function toggleTask(index, isChecked) {
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].checkedTasks[index] = isChecked;
+            // Quiet save so it doesn't interrupt the user checking multiple boxes
+            localStorage.setItem('75hard_state', JSON.stringify(state));
         }
 
         function addWater() {
             const amountEl = document.getElementById('waterAmount');
             const amount = parseInt(amountEl.value);
-
-            if (isNaN(amount) || amount <= 0) {
-                alert("Please enter a valid amount in ml.");
-                return;
-            }
-
+            if (isNaN(amount) || amount <= 0) return alert("Please enter a valid amount in ml.");
             ensureMetricsExist();
             state.metrics[state.viewingDay].waterLogs.push(amount);
             save(); 
@@ -306,12 +312,7 @@
             const calsEl = document.getElementById('foodCals');
             const name = nameEl.value.trim();
             const cals = parseInt(calsEl.value);
-
-            if (!name || isNaN(cals)) {
-                alert("Please enter both a meal name and calories.");
-                return;
-            }
-
+            if (!name || isNaN(cals)) return alert("Please enter both a meal name and calories.");
             ensureMetricsExist();
             state.metrics[state.viewingDay].food.push({ name, cals });
             save(); 
@@ -348,6 +349,10 @@
                 return;
             }
 
+            // Force save the checkboxes state just in case
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].checkedTasks = Array.from(checkboxes).map(cb => cb.checked);
+
             state.incompleteDays = state.incompleteDays.filter(d => d !== state.viewingDay);
             if (!state.completedDays.includes(state.viewingDay)) {
                 state.completedDays.push(state.viewingDay);
@@ -357,6 +362,11 @@
 
         function submitIncomplete() {
             if (confirm(`Log Day ${state.viewingDay} as incomplete?`)) {
+                // Force save the checkboxes state
+                ensureMetricsExist();
+                const checkboxes = document.querySelectorAll('.daily-check');
+                state.metrics[state.viewingDay].checkedTasks = Array.from(checkboxes).map(cb => cb.checked);
+
                 state.completedDays = state.completedDays.filter(d => d !== state.viewingDay);
                 if (!state.incompleteDays.includes(state.viewingDay)) {
                     state.incompleteDays.push(state.viewingDay);
