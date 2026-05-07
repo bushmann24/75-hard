@@ -365,6 +365,7 @@
 
         function submitDay() {
             const checkboxes = document.querySelectorAll('.daily-check');
+            // This ONLY checks the Non-Negotiable checkboxes, it ignores the food/water completely
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
 
             if (!allChecked) {
@@ -402,6 +403,10 @@
                 state.completedDays = [];
                 state.incompleteDays = [];
                 state.metrics = {}; 
+                // Restore defaults!
+                state.tasks = [...DEFAULT_TASKS];
+                state.waterGoal = 4000;
+                state.calorieGoal = 2500;
                 nav('setup');
             }
         }
