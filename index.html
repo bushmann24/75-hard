@@ -11,7 +11,6 @@
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .grid-box { aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #1e293b; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; transition: all 0.2s; }
         input[type="checkbox"]:checked + label { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
-        /* Hide number input arrows */
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
@@ -36,12 +35,11 @@
             locked: false,
             completedDays: [],
             incompleteDays: [],
-            metrics: {}, // NEW: Saves water/calories for each day
+            metrics: {}, 
             viewingDay: 1, 
             view: 'setup' 
         };
 
-        // Safety checks for older saves
         if (!state.incompleteDays) state.incompleteDays = [];
         if (!state.metrics) state.metrics = {};
 
@@ -158,10 +156,12 @@
 
         // 3. DAILY TRACKER VIEW
         function renderDaily(root) {
+            ensureMetricsExist();
             const isAlreadyCompleted = state.completedDays.includes(state.viewingDay);
+            const todayMetrics = state.metrics[state.viewingDay];
             
-            // Get today's metrics (or default to 0)
-            const todayMetrics = state.metrics[state.viewingDay] || { water: 0, cals: "" };
+            // Calculate total calories for the day
+            const totalCals = todayMetrics.food.reduce((sum, item) => sum + item.cals, 0);
 
             root.innerHTML = `
                 <div class="pt-8">
@@ -170,27 +170,41 @@
                     <h2 class="text-3xl font-black italic uppercase tracking-tight text-white mb-2">Day ${state.viewingDay}</h2>
                     <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Check them off as you go.</p>
 
-                    <div class="glass p-6 rounded-3xl mb-6 shadow-xl space-y-6">
-                        <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/10 pb-2">Daily Numbers</h3>
+                    <div class="glass p-6 rounded-3xl mb-4 shadow-xl">
+                        <div class="flex justify-between items-end border-b border-white/10 pb-2 mb-4">
+                            <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Water Log</h3>
+                            <span class="text-blue-400 font-bold text-sm">${todayMetrics.water} L Total</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="updateWater(-0.5)" class="flex-1 bg-white/5 hover:bg-white/10 py-3 rounded-xl text-white font-black transition active:scale-95">-</button>
+                            <button onclick="updateWater(0.5)" class="flex-2 w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-xl font-black transition active:scale-95">+ 0.5L</button>
+                            <button onclick="updateWater(1.0)" class="flex-2 w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-xl font-black transition active:scale-95">+ 1.0L</button>
+                        </div>
+                    </div>
+
+                    <div class="glass p-6 rounded-3xl mb-6 shadow-xl">
+                        <div class="flex justify-between items-end border-b border-white/10 pb-2 mb-4">
+                            <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Food Log</h3>
+                            <span class="text-orange-400 font-bold text-sm">${totalCals} kcal Total</span>
+                        </div>
                         
-                        <div>
-                            <div class="flex justify-between text-white text-sm font-bold mb-3">
-                                <span>Water Intake</span>
-                                <span class="text-blue-400">${todayMetrics.water} L</span>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="updateWater(-0.5)" class="flex-1 bg-white/5 hover:bg-white/10 py-3 rounded-xl text-white font-black transition active:scale-95">-</button>
-                                <button onclick="updateWater(0.5)" class="flex-2 w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-xl font-black transition active:scale-95">+ 0.5L</button>
-                                <button onclick="updateWater(1.0)" class="flex-2 w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-xl font-black transition active:scale-95">+ 1.0L</button>
-                            </div>
+                        <div class="space-y-2 mb-4">
+                            ${todayMetrics.food.map((f, i) => `
+                                <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                    <span class="text-sm text-white font-bold">${f.name}</span>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-sm text-orange-400 font-bold">${f.cals} kcal</span>
+                                        <button onclick="removeFood(${i})" class="text-red-500 hover:text-red-400 font-black text-sm px-2">✕</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${todayMetrics.food.length === 0 ? `<p class="text-xs text-slate-500 italic text-center py-2">No meals logged yet.</p>` : ''}
                         </div>
 
-                        <div>
-                            <label class="flex justify-between text-white text-sm font-bold mb-3">
-                                <span>Total Calories</span>
-                                <span class="text-orange-400">kcal</span>
-                            </label>
-                            <input type="number" onchange="updateCals(this.value)" value="${todayMetrics.cals}" placeholder="e.g. 2400" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white font-bold focus:outline-none focus:border-orange-500">
+                        <div class="flex gap-2">
+                            <input type="text" id="foodName" placeholder="Meal (e.g. Pasta)" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white font-bold focus:outline-none focus:border-orange-500">
+                            <input type="number" id="foodCals" placeholder="kcal" class="w-24 bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white font-bold focus:outline-none focus:border-orange-500">
+                            <button onclick="addFood()" class="bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 px-4 rounded-xl font-black transition active:scale-95">+</button>
                         </div>
                     </div>
 
@@ -227,21 +241,43 @@
         // Metrics Handlers
         function ensureMetricsExist() {
             if (!state.metrics[state.viewingDay]) {
-                state.metrics[state.viewingDay] = { water: 0, cals: "" };
+                state.metrics[state.viewingDay] = { water: 0, food: [] };
+            }
+            // Migration script: if a user has old data using 'cals' string, move it to the food array
+            if (state.metrics[state.viewingDay].cals !== undefined && !state.metrics[state.viewingDay].food) {
+                let oldCals = parseInt(state.metrics[state.viewingDay].cals) || 0;
+                state.metrics[state.viewingDay].food = oldCals > 0 ? [{name: "Old Entry", cals: oldCals}] : [];
+                delete state.metrics[state.viewingDay].cals;
             }
         }
 
         function updateWater(amount) {
             ensureMetricsExist();
             let current = parseFloat(state.metrics[state.viewingDay].water) || 0;
-            let newAmount = Math.max(0, current + amount); // Prevents negative water
+            let newAmount = Math.max(0, current + amount); 
             state.metrics[state.viewingDay].water = newAmount;
-            save(); // This instantly re-renders the UI to show the new number
+            save(); 
         }
 
-        function updateCals(val) {
+        function addFood() {
+            const nameEl = document.getElementById('foodName');
+            const calsEl = document.getElementById('foodCals');
+            const name = nameEl.value.trim();
+            const cals = parseInt(calsEl.value);
+
+            if (!name || isNaN(cals)) {
+                alert("Please enter both a meal name and calories.");
+                return;
+            }
+
             ensureMetricsExist();
-            state.metrics[state.viewingDay].cals = val;
+            state.metrics[state.viewingDay].food.push({ name, cals });
+            save(); // This re-renders the UI instantly, showing the new item in the list
+        }
+
+        function removeFood(index) {
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].food.splice(index, 1);
             save();
         }
 
@@ -292,7 +328,7 @@
                 state.locked = false;
                 state.completedDays = [];
                 state.incompleteDays = [];
-                state.metrics = {}; // Clears water/food data too
+                state.metrics = {}; 
                 nav('setup');
             }
         }
