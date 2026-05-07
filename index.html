@@ -19,6 +19,7 @@
 
     <script>
         // --- DEFAULT SETUP ---
+        // Notice: The 4 Litres of water task is removed from here!
         const DEFAULT_TASKS = [
             "Follow a diet",
             "45 minute workout",
@@ -31,6 +32,8 @@
         // --- APP STATE ---
         let state = JSON.parse(localStorage.getItem('75hard_state')) || {
             name: "",
+            waterGoal: 4000, // Default 4000ml
+            calorieGoal: 2500, // Default 2500kcal
             tasks: [...DEFAULT_TASKS],
             locked: false,
             completedDays: [],
@@ -40,8 +43,11 @@
             view: 'setup' 
         };
 
+        // Safety checks for older saves
         if (!state.incompleteDays) state.incompleteDays = [];
         if (!state.metrics) state.metrics = {};
+        if (!state.waterGoal) state.waterGoal = 4000;
+        if (!state.calorieGoal) state.calorieGoal = 2500;
 
         function getActiveDay() {
             if (state.completedDays.length === 0 && state.incompleteDays.length === 0) return 1;
@@ -76,7 +82,19 @@
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Your Name</label>
                         <input type="text" id="userName" value="${state.name}" placeholder="Enter your name..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white font-bold mb-6 focus:outline-none focus:border-blue-500">
                         
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Your Daily Non-Negotiables</label>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Daily Targets</label>
+                        <div class="flex gap-3 mb-6">
+                            <div class="flex-1">
+                                <label class="block text-[10px] text-blue-400 font-bold uppercase mb-1">Water (ml)</label>
+                                <input type="number" id="setupWater" value="${state.waterGoal}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white font-bold focus:outline-none focus:border-blue-500">
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-[10px] text-orange-400 font-bold uppercase mb-1">Calories (kcal)</label>
+                                <input type="number" id="setupCals" value="${state.calorieGoal}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white font-bold focus:outline-none focus:border-orange-500">
+                            </div>
+                        </div>
+
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Your Non-Negotiables</label>
                         <div id="task-list" class="space-y-3 mb-6">
                             ${state.tasks.map((t, i) => `
                                 <div class="flex gap-2">
@@ -164,11 +182,15 @@
             const totalWater = todayMetrics.waterLogs.reduce((sum, amt) => sum + amt, 0);
             const totalCals = todayMetrics.food.reduce((sum, item) => sum + item.cals, 0);
 
-            // Fetch checked status (fallback to all checked if it was an older completed day)
+            // Fetch checked status 
             let checkedTasks = todayMetrics.checkedTasks;
             if (!checkedTasks) {
                 checkedTasks = state.tasks.map(() => isAlreadyCompleted);
             }
+
+            // Determine if goals are met for color coding
+            const waterColor = totalWater >= state.waterGoal ? 'text-green-400' : 'text-blue-400';
+            const calColor = totalCals >= state.calorieGoal ? 'text-green-400' : 'text-orange-400';
 
             root.innerHTML = `
                 <div class="pt-8">
@@ -180,7 +202,7 @@
                     <div class="glass p-6 rounded-3xl mb-4 shadow-xl">
                         <div class="flex justify-between items-end border-b border-white/10 pb-2 mb-4">
                             <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Water Log</h3>
-                            <span class="text-blue-400 font-bold text-sm">${totalWater} ml Total</span>
+                            <span class="${waterColor} font-bold text-sm">${totalWater} / ${state.waterGoal} ml</span>
                         </div>
                         
                         <div class="space-y-2 mb-4">
@@ -205,7 +227,7 @@
                     <div class="glass p-6 rounded-3xl mb-6 shadow-xl">
                         <div class="flex justify-between items-end border-b border-white/10 pb-2 mb-4">
                             <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Food Log</h3>
-                            <span class="text-orange-400 font-bold text-sm">${totalCals} kcal Total</span>
+                            <span class="${calColor} font-bold text-sm">${totalCals} / ${state.calorieGoal} kcal</span>
                         </div>
                         
                         <div class="space-y-2 mb-4">
@@ -229,7 +251,7 @@
                     </div>
 
                     <div class="glass p-6 rounded-3xl mb-10 shadow-xl space-y-4">
-                        <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Non-Negotiables</h3>
+                        <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Non-Negotiables (Required to Complete Day)</h3>
                         ${state.tasks.map((t, i) => `
                             <div class="bg-white/5 p-4 rounded-2xl flex items-center gap-4 border border-white/5">
                                 <input type="checkbox" id="task-${i}" ${checkedTasks[i] ? 'checked' : ''} onchange="toggleTask(${i}, this.checked)" class="daily-check w-6 h-6 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0 cursor-pointer">
@@ -268,7 +290,6 @@
                 state.metrics[state.viewingDay].checkedTasks = state.tasks.map(() => isAlreadyCompleted);
             }
             
-            // Migrations
             if (state.metrics[state.viewingDay].cals !== undefined && !state.metrics[state.viewingDay].food) {
                 let oldCals = parseInt(state.metrics[state.viewingDay].cals) || 0;
                 state.metrics[state.viewingDay].food = oldCals > 0 ? [{name: "Old Entry", cals: oldCals}] : [];
@@ -288,7 +309,6 @@
         function toggleTask(index, isChecked) {
             ensureMetricsExist();
             state.metrics[state.viewingDay].checkedTasks[index] = isChecked;
-            // Quiet save so it doesn't interrupt the user checking multiple boxes
             localStorage.setItem('75hard_state', JSON.stringify(state));
         }
 
@@ -331,10 +351,15 @@
 
         function lockIn() {
             const nameInput = document.getElementById('userName').value.trim();
+            const waterTarget = parseInt(document.getElementById('setupWater').value);
+            const calTarget = parseInt(document.getElementById('setupCals').value);
+
             if (state.tasks.length === 0) return alert("You need at least one rule!");
             
             if (confirm("Once you start, you cannot change your rules. Ready to commit?")) {
                 state.name = nameInput;
+                state.waterGoal = isNaN(waterTarget) ? 4000 : waterTarget;
+                state.calorieGoal = isNaN(calTarget) ? 2500 : calTarget;
                 state.locked = true;
                 nav('grid');
             }
@@ -342,14 +367,14 @@
 
         function submitDay() {
             const checkboxes = document.querySelectorAll('.daily-check');
+            // This ONLY checks the Non-Negotiable checkboxes, it ignores the food/water completely
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
 
             if (!allChecked) {
-                alert("You haven't finished everything today! If you missed something, use the 'Mark as Incomplete' button.");
+                alert("You haven't ticked all your Non-Negotiable boxes! If you missed something, use the 'Mark as Incomplete' button.");
                 return;
             }
 
-            // Force save the checkboxes state just in case
             ensureMetricsExist();
             state.metrics[state.viewingDay].checkedTasks = Array.from(checkboxes).map(cb => cb.checked);
 
@@ -362,7 +387,6 @@
 
         function submitIncomplete() {
             if (confirm(`Log Day ${state.viewingDay} as incomplete?`)) {
-                // Force save the checkboxes state
                 ensureMetricsExist();
                 const checkboxes = document.querySelectorAll('.daily-check');
                 state.metrics[state.viewingDay].checkedTasks = Array.from(checkboxes).map(cb => cb.checked);
