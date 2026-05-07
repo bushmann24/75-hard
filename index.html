@@ -11,6 +11,8 @@
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .grid-box { aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #1e293b; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; transition: all 0.2s; }
         input[type="checkbox"]:checked + label { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
+        /* Hide number input arrows */
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen flex justify-center pb-20">
@@ -22,7 +24,6 @@
             "Follow a diet",
             "45 minute workout",
             "45 minute workout (outside)",
-            "Drink 4 litres of water",
             "Read 10 pages of a book",
             "Take a daily progress pic",
             "No cheat meals or alcohol"
@@ -35,13 +36,15 @@
             locked: false,
             completedDays: [],
             incompleteDays: [],
+            metrics: {}, // NEW: Saves water/calories for each day
             viewingDay: 1, 
             view: 'setup' 
         };
 
+        // Safety checks for older saves
         if (!state.incompleteDays) state.incompleteDays = [];
+        if (!state.metrics) state.metrics = {};
 
-        // Calculate the highest day they've reached
         function getActiveDay() {
             if (state.completedDays.length === 0 && state.incompleteDays.length === 0) return 1;
             return Math.max(0, ...state.completedDays, ...state.incompleteDays) + 1;
@@ -155,8 +158,10 @@
 
         // 3. DAILY TRACKER VIEW
         function renderDaily(root) {
-            // Check if they are looking at a day they already completed to pre-check the boxes
             const isAlreadyCompleted = state.completedDays.includes(state.viewingDay);
+            
+            // Get today's metrics (or default to 0)
+            const todayMetrics = state.metrics[state.viewingDay] || { water: 0, cals: "" };
 
             root.innerHTML = `
                 <div class="pt-8">
@@ -165,7 +170,32 @@
                     <h2 class="text-3xl font-black italic uppercase tracking-tight text-white mb-2">Day ${state.viewingDay}</h2>
                     <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Check them off as you go.</p>
 
+                    <div class="glass p-6 rounded-3xl mb-6 shadow-xl space-y-6">
+                        <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/10 pb-2">Daily Numbers</h3>
+                        
+                        <div>
+                            <div class="flex justify-between text-white text-sm font-bold mb-3">
+                                <span>Water Intake</span>
+                                <span class="text-blue-400">${todayMetrics.water} L</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="updateWater(-0.5)" class="flex-1 bg-white/5 hover:bg-white/10 py-3 rounded-xl text-white font-black transition active:scale-95">-</button>
+                                <button onclick="updateWater(0.5)" class="flex-2 w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-xl font-black transition active:scale-95">+ 0.5L</button>
+                                <button onclick="updateWater(1.0)" class="flex-2 w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-xl font-black transition active:scale-95">+ 1.0L</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="flex justify-between text-white text-sm font-bold mb-3">
+                                <span>Total Calories</span>
+                                <span class="text-orange-400">kcal</span>
+                            </label>
+                            <input type="number" onchange="updateCals(this.value)" value="${todayMetrics.cals}" placeholder="e.g. 2400" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white font-bold focus:outline-none focus:border-orange-500">
+                        </div>
+                    </div>
+
                     <div class="glass p-6 rounded-3xl mb-10 shadow-xl space-y-4">
+                        <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Non-Negotiables</h3>
                         ${state.tasks.map((t, i) => `
                             <div class="bg-white/5 p-4 rounded-2xl flex items-center gap-4 border border-white/5">
                                 <input type="checkbox" id="task-${i}" ${isAlreadyCompleted ? 'checked' : ''} class="daily-check w-6 h-6 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0 cursor-pointer">
@@ -194,19 +224,31 @@
             nav('daily');
         }
 
-        function updateTask(index, val) {
-            state.tasks[index] = val;
+        // Metrics Handlers
+        function ensureMetricsExist() {
+            if (!state.metrics[state.viewingDay]) {
+                state.metrics[state.viewingDay] = { water: 0, cals: "" };
+            }
         }
 
-        function removeTask(index) {
-            state.tasks.splice(index, 1);
-            renderSetup(document.getElementById('app'));
+        function updateWater(amount) {
+            ensureMetricsExist();
+            let current = parseFloat(state.metrics[state.viewingDay].water) || 0;
+            let newAmount = Math.max(0, current + amount); // Prevents negative water
+            state.metrics[state.viewingDay].water = newAmount;
+            save(); // This instantly re-renders the UI to show the new number
         }
 
-        function addTask() {
-            state.tasks.push("New rule");
-            renderSetup(document.getElementById('app'));
+        function updateCals(val) {
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].cals = val;
+            save();
         }
+
+        // Setup Handlers
+        function updateTask(index, val) { state.tasks[index] = val; }
+        function removeTask(index) { state.tasks.splice(index, 1); renderSetup(document.getElementById('app')); }
+        function addTask() { state.tasks.push("New rule"); renderSetup(document.getElementById('app')); }
 
         function lockIn() {
             const nameInput = document.getElementById('userName').value.trim();
@@ -228,10 +270,7 @@
                 return;
             }
 
-            // Remove from incomplete array if it was there
             state.incompleteDays = state.incompleteDays.filter(d => d !== state.viewingDay);
-            
-            // Add to completed array if not there
             if (!state.completedDays.includes(state.viewingDay)) {
                 state.completedDays.push(state.viewingDay);
             }
@@ -240,10 +279,7 @@
 
         function submitIncomplete() {
             if (confirm(`Log Day ${state.viewingDay} as incomplete?`)) {
-                // Remove from completed array if it was there
                 state.completedDays = state.completedDays.filter(d => d !== state.viewingDay);
-                
-                // Add to incomplete array if not there
                 if (!state.incompleteDays.includes(state.viewingDay)) {
                     state.incompleteDays.push(state.viewingDay);
                 }
@@ -256,6 +292,7 @@
                 state.locked = false;
                 state.completedDays = [];
                 state.incompleteDays = [];
+                state.metrics = {}; // Clears water/food data too
                 nav('setup');
             }
         }
