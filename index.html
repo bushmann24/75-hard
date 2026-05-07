@@ -10,7 +10,7 @@
         body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .grid-box { aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #1e293b; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; transition: all 0.2s; }
-        input[type="checkbox"]:checked + label { text-decoration: line-through; opacity: 0.4; }
+        input[type="checkbox"]:checked + label { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen flex justify-center pb-20">
@@ -35,10 +35,14 @@
             locked: false,
             currentDay: 1,
             completedDays: [],
-            view: 'setup' // 'setup', 'grid', 'daily'
+            incompleteDays: [], // The new "Forgiving" array
+            view: 'setup' 
         };
 
-        // If they already locked it in, make sure they open to the grid
+        // Safety check for older saves that might not have incompleteDays yet
+        if (!state.incompleteDays) state.incompleteDays = [];
+
+        // If locked in, jump to grid
         if (state.locked && state.view === 'setup') {
             state.view = 'grid';
         }
@@ -56,7 +60,7 @@
             else if (state.view === 'daily') renderDaily(root);
         }
 
-        // 1. ONBOARDING / SETUP VIEW
+        // 1. SETUP VIEW
         function renderSetup(root) {
             root.innerHTML = `
                 <div class="pt-8 animate-fade-in">
@@ -84,19 +88,30 @@
             `;
         }
 
-        // 2. GRID / DASHBOARD VIEW
+        // 2. GRID VIEW
         function renderGrid(root) {
             let gridHtml = '';
             for (let i = 1; i <= 75; i++) {
                 const isDone = state.completedDays.includes(i);
+                const isFailed = state.incompleteDays.includes(i);
                 const isActive = i === state.currentDay;
+                
                 let classes = "grid-box ";
+                let content = i;
                 
-                if (isDone) classes += "bg-green-500 border-green-500 text-slate-900 shadow-lg shadow-green-500/20";
-                else if (isActive) classes += "border-blue-500 text-blue-500 animate-pulse";
-                else classes += "bg-slate-900/50 text-slate-600";
+                if (isDone) {
+                    classes += "bg-green-500 border-green-500 text-slate-900 shadow-lg shadow-green-500/20";
+                    content = '✓';
+                } else if (isFailed) {
+                    classes += "bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20";
+                    content = '✕';
+                } else if (isActive) {
+                    classes += "border-blue-500 text-blue-500 animate-pulse";
+                } else {
+                    classes += "bg-slate-900/50 text-slate-600";
+                }
                 
-                gridHtml += `<div class="${classes}">${isDone ? '✓' : i}</div>`;
+                gridHtml += `<div class="${classes}">${content}</div>`;
             }
 
             const headerTitle = state.currentDay > 75 ? "Challenge Complete 🏆" : `Day ${state.currentDay} of 75`;
@@ -121,7 +136,7 @@
                     </div>
 
                     <div class="mt-12 text-center">
-                        <button onclick="failChallenge()" class="text-red-500/50 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.2em] transition">Restart Challenge</button>
+                        <button onclick="hardReset()" class="text-slate-600 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.2em] transition">Restart & Change Rules</button>
                     </div>
                 </div>
             `;
@@ -136,7 +151,7 @@
                     <h2 class="text-3xl font-black italic uppercase tracking-tight text-white mb-2">Day ${state.currentDay}</h2>
                     <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Check them off as you go.</p>
 
-                    <div class="glass p-6 rounded-3xl mb-10 shadow-xl space-y-4" id="daily-checklist">
+                    <div class="glass p-6 rounded-3xl mb-10 shadow-xl space-y-4">
                         ${state.tasks.map((t, i) => `
                             <div class="bg-white/5 p-4 rounded-2xl flex items-center gap-4 border border-white/5">
                                 <input type="checkbox" id="task-${i}" class="daily-check w-6 h-6 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0 cursor-pointer">
@@ -145,7 +160,10 @@
                         `).join('')}
                     </div>
 
-                    <button onclick="submitDay()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl shadow-blue-600/20 transition active:scale-95">Complete Day</button>
+                    <div class="flex flex-col gap-4">
+                        <button onclick="submitDay()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl shadow-blue-600/20 transition active:scale-95">Complete Day</button>
+                        <button onclick="submitIncomplete()" class="w-full bg-orange-600/10 text-orange-500 hover:bg-orange-600/20 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition active:scale-95 border border-orange-500/20">Mark as Incomplete</button>
+                    </div>
                 </div>
             `;
         }
@@ -187,7 +205,7 @@
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
 
             if (!allChecked) {
-                alert("You haven't finished everything today! Keep going.");
+                alert("You haven't finished everything today! If you missed something, use the 'Mark as Incomplete' button.");
                 return;
             }
 
@@ -198,12 +216,26 @@
             nav('grid');
         }
 
-        function failChallenge() {
-            if (confirm("Did you miss a day? This will wipe your progress and send you back to Day 1. There is no undo.")) {
+        function submitIncomplete() {
+            if (confirm("Log today as an incomplete day? It will show up orange on your grid.")) {
+                if (!state.incompleteDays.includes(state.currentDay)) {
+                    state.incompleteDays.push(state.currentDay);
+                }
+                state.currentDay++;
+                nav('grid');
+            }
+        }
+
+        // This is the new Hard Reset
+        function hardReset() {
+            if (confirm("DANGER: This will wipe all your progress AND let you re-write your rules. Go back to Setup?")) {
+                state.locked = false;
                 state.currentDay = 1;
                 state.completedDays = [];
-                // Keeps their custom rules locked in, just resets the days
-                nav('grid');
+                state.incompleteDays = [];
+                // Note: We leave the 'name' and 'tasks' as they currently are, 
+                // so they don't have to re-type everything if they just want to make a small tweak.
+                nav('setup');
             }
         }
 
