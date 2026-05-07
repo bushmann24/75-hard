@@ -19,7 +19,6 @@
 
     <script>
         // --- DEFAULT SETUP ---
-        // Notice: The 4 Litres of water task is removed from here!
         const DEFAULT_TASKS = [
             "Follow a diet",
             "45 minute workout",
@@ -32,8 +31,8 @@
         // --- APP STATE ---
         let state = JSON.parse(localStorage.getItem('75hard_state')) || {
             name: "",
-            waterGoal: 4000, // Default 4000ml
-            calorieGoal: 2500, // Default 2500kcal
+            waterGoal: 4000, 
+            calorieGoal: 2500, 
             tasks: [...DEFAULT_TASKS],
             locked: false,
             completedDays: [],
@@ -43,7 +42,6 @@
             view: 'setup' 
         };
 
-        // Safety checks for older saves
         if (!state.incompleteDays) state.incompleteDays = [];
         if (!state.metrics) state.metrics = {};
         if (!state.waterGoal) state.waterGoal = 4000;
@@ -149,7 +147,7 @@
             }
 
             const headerTitle = activeDay > 75 ? "Challenge Complete 🏆" : `Day ${activeDay} of 75`;
-            const headerSubtitle = activeDay > 75 ? "You made it to the end." : "Tap the pulsing day to log progress. Tap past days to edit.";
+            const headerSubtitle = activeDay > 75 ? "You made it to the end." : "Log your daily progress below.";
 
             root.innerHTML = `
                 <div class="pt-8">
@@ -178,23 +176,20 @@
             const isAlreadyCompleted = state.completedDays.includes(state.viewingDay);
             const todayMetrics = state.metrics[state.viewingDay];
             
-            // Calculate totals for the day
             const totalWater = todayMetrics.waterLogs.reduce((sum, amt) => sum + amt, 0);
             const totalCals = todayMetrics.food.reduce((sum, item) => sum + item.cals, 0);
 
-            // Fetch checked status 
             let checkedTasks = todayMetrics.checkedTasks;
             if (!checkedTasks) {
                 checkedTasks = state.tasks.map(() => isAlreadyCompleted);
             }
 
-            // Determine if goals are met for color coding
             const waterColor = totalWater >= state.waterGoal ? 'text-green-400' : 'text-blue-400';
             const calColor = totalCals >= state.calorieGoal ? 'text-green-400' : 'text-orange-400';
 
             root.innerHTML = `
                 <div class="pt-8">
-                    <button onclick="nav('grid')" class="text-slate-500 text-[10px] font-black uppercase mb-8 tracking-[0.2em] hover:text-white transition">← Back to Grid</button>
+                    <button onclick="nav('grid')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-black uppercase px-4 py-2 rounded-lg mb-8 tracking-widest transition shadow-md border border-slate-700">Back</button>
                     
                     <h2 class="text-3xl font-black italic uppercase tracking-tight text-white mb-2">Day ${state.viewingDay}</h2>
                     <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Check them off as you go.</p>
@@ -318,6 +313,7 @@
             if (isNaN(amount) || amount <= 0) return alert("Please enter a valid amount in ml.");
             ensureMetricsExist();
             state.metrics[state.viewingDay].waterLogs.push(amount);
+            amountEl.value = ""; // Clear input after adding
             save(); 
         }
 
@@ -335,6 +331,8 @@
             if (!name || isNaN(cals)) return alert("Please enter both a meal name and calories.");
             ensureMetricsExist();
             state.metrics[state.viewingDay].food.push({ name, cals });
+            nameEl.value = ""; // Clear input
+            calsEl.value = ""; // Clear input
             save(); 
         }
 
@@ -367,7 +365,6 @@
 
         function submitDay() {
             const checkboxes = document.querySelectorAll('.daily-check');
-            // This ONLY checks the Non-Negotiable checkboxes, it ignores the food/water completely
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
 
             if (!allChecked) {
