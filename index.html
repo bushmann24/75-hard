@@ -160,7 +160,8 @@
             const isAlreadyCompleted = state.completedDays.includes(state.viewingDay);
             const todayMetrics = state.metrics[state.viewingDay];
             
-            // Calculate total calories for the day
+            // Calculate totals for the day
+            const totalWater = todayMetrics.waterLogs.reduce((sum, amt) => sum + amt, 0);
             const totalCals = todayMetrics.food.reduce((sum, item) => sum + item.cals, 0);
 
             root.innerHTML = `
@@ -173,12 +174,25 @@
                     <div class="glass p-6 rounded-3xl mb-4 shadow-xl">
                         <div class="flex justify-between items-end border-b border-white/10 pb-2 mb-4">
                             <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Water Log</h3>
-                            <span class="text-blue-400 font-bold text-sm">${todayMetrics.water} L Total</span>
+                            <span class="text-blue-400 font-bold text-sm">${totalWater} ml Total</span>
                         </div>
+                        
+                        <div class="space-y-2 mb-4">
+                            ${todayMetrics.waterLogs.map((w, i) => `
+                                <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                    <span class="text-sm text-white font-bold">Water</span>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-sm text-blue-400 font-bold">${w} ml</span>
+                                        <button onclick="removeWater(${i})" class="text-red-500 hover:text-red-400 font-black text-sm px-2">✕</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${todayMetrics.waterLogs.length === 0 ? `<p class="text-xs text-slate-500 italic text-center py-2">No water logged yet.</p>` : ''}
+                        </div>
+
                         <div class="flex gap-2">
-                            <button onclick="updateWater(-0.5)" class="flex-1 bg-white/5 hover:bg-white/10 py-3 rounded-xl text-white font-black transition active:scale-95">-</button>
-                            <button onclick="updateWater(0.5)" class="flex-2 w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-xl font-black transition active:scale-95">+ 0.5L</button>
-                            <button onclick="updateWater(1.0)" class="flex-2 w-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 py-3 rounded-xl font-black transition active:scale-95">+ 1.0L</button>
+                            <input type="number" id="waterAmount" placeholder="Amount in ml (e.g. 500)" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white font-bold focus:outline-none focus:border-blue-500">
+                            <button onclick="addWater()" class="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-6 rounded-xl font-black transition active:scale-95">+</button>
                         </div>
                     </div>
 
@@ -241,22 +255,50 @@
         // Metrics Handlers
         function ensureMetricsExist() {
             if (!state.metrics[state.viewingDay]) {
-                state.metrics[state.viewingDay] = { water: 0, food: [] };
+                state.metrics[state.viewingDay] = { waterLogs: [], food: [] };
             }
-            // Migration script: if a user has old data using 'cals' string, move it to the food array
+            
+            // Migration script for old food entries
             if (state.metrics[state.viewingDay].cals !== undefined && !state.metrics[state.viewingDay].food) {
                 let oldCals = parseInt(state.metrics[state.viewingDay].cals) || 0;
                 state.metrics[state.viewingDay].food = oldCals > 0 ? [{name: "Old Entry", cals: oldCals}] : [];
                 delete state.metrics[state.viewingDay].cals;
             }
+            
+            // Migration script for old water entries (converts Liters to ml)
+            if (state.metrics[state.viewingDay].water !== undefined && !state.metrics[state.viewingDay].waterLogs) {
+                let oldWater = parseFloat(state.metrics[state.viewingDay].water) || 0;
+                // If it looks like Liters (less than 20), multiply by 1000
+                if (oldWater > 0 && oldWater < 20) {
+                    oldWater = Math.round(oldWater * 1000);
+                }
+                state.metrics[state.viewingDay].waterLogs = oldWater > 0 ? [oldWater] : [];
+                delete state.metrics[state.viewingDay].water;
+            }
+
+            // Fallback to ensure arrays exist
+            if (!state.metrics[state.viewingDay].waterLogs) state.metrics[state.viewingDay].waterLogs = [];
+            if (!state.metrics[state.viewingDay].food) state.metrics[state.viewingDay].food = [];
         }
 
-        function updateWater(amount) {
+        function addWater() {
+            const amountEl = document.getElementById('waterAmount');
+            const amount = parseInt(amountEl.value);
+
+            if (isNaN(amount) || amount <= 0) {
+                alert("Please enter a valid amount in ml.");
+                return;
+            }
+
             ensureMetricsExist();
-            let current = parseFloat(state.metrics[state.viewingDay].water) || 0;
-            let newAmount = Math.max(0, current + amount); 
-            state.metrics[state.viewingDay].water = newAmount;
+            state.metrics[state.viewingDay].waterLogs.push(amount);
             save(); 
+        }
+
+        function removeWater(index) {
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].waterLogs.splice(index, 1);
+            save();
         }
 
         function addFood() {
@@ -272,7 +314,7 @@
 
             ensureMetricsExist();
             state.metrics[state.viewingDay].food.push({ name, cals });
-            save(); // This re-renders the UI instantly, showing the new item in the list
+            save(); 
         }
 
         function removeFood(index) {
