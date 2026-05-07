@@ -33,16 +33,21 @@
             name: "",
             tasks: [...DEFAULT_TASKS],
             locked: false,
-            currentDay: 1,
             completedDays: [],
-            incompleteDays: [], // The new "Forgiving" array
+            incompleteDays: [],
+            viewingDay: 1, // Used to track which day is currently opened in the checklist
             view: 'setup' 
         };
 
-        // Safety check for older saves that might not have incompleteDays yet
+        // Safety checks for older saves
         if (!state.incompleteDays) state.incompleteDays = [];
 
-        // If locked in, jump to grid
+        // Calculate the actual active day based on what's been logged
+        function getActiveDay() {
+            if (state.completedDays.length === 0 && state.incompleteDays.length === 0) return 1;
+            return Math.max(0, ...state.completedDays, ...state.incompleteDays) + 1;
+        }
+
         if (state.locked && state.view === 'setup') {
             state.view = 'grid';
         }
@@ -90,14 +95,19 @@
 
         // 2. GRID VIEW
         function renderGrid(root) {
+            const activeDay = getActiveDay();
             let gridHtml = '';
+            
             for (let i = 1; i <= 75; i++) {
                 const isDone = state.completedDays.includes(i);
                 const isFailed = state.incompleteDays.includes(i);
-                const isActive = i === state.currentDay;
+                const isActive = i === activeDay;
+                const isLocked = i > activeDay;
                 
                 let classes = "grid-box ";
                 let content = i;
+                let tag = "div";
+                let onClick = "";
                 
                 if (isDone) {
                     classes += "bg-green-500 border-green-500 text-slate-900 shadow-lg shadow-green-500/20";
@@ -106,15 +116,20 @@
                     classes += "bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20";
                     content = '✕';
                 } else if (isActive) {
-                    classes += "border-blue-500 text-blue-500 animate-pulse";
-                } else {
-                    classes += "bg-slate-900/50 text-slate-600";
+                    // Make the current day a clickable button
+                    tag = "button";
+                    classes += "border-blue-500 text-blue-500 animate-pulse hover:bg-blue-600 hover:text-white cursor-pointer shadow-lg shadow-blue-500/20";
+                    onClick = `onclick="openDay(${i})"`;
+                } else if (isLocked) {
+                    // Dim out future days
+                    classes += "bg-slate-900/30 text-slate-700 opacity-40 cursor-not-allowed";
                 }
                 
-                gridHtml += `<div class="${classes}">${content}</div>`;
+                gridHtml += `<${tag} ${onClick} class="${classes}">${content}</${tag}>`;
             }
 
-            const headerTitle = state.currentDay > 75 ? "Challenge Complete 🏆" : `Day ${state.currentDay} of 75`;
+            const headerTitle = activeDay > 75 ? "Challenge Complete 🏆" : `Day ${activeDay} of 75`;
+            const headerSubtitle = activeDay > 75 ? "You made it to the end." : "Tap the pulsing day to log progress.";
 
             root.innerHTML = `
                 <div class="pt-8">
@@ -122,14 +137,9 @@
                         <div>
                             <p class="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">${state.name ? state.name + "'s" : "Your"} Journey</p>
                             <h1 class="text-4xl font-black italic uppercase tracking-tight text-white leading-none">${headerTitle}</h1>
+                            <p class="text-blue-400 text-xs font-bold mt-3">${headerSubtitle}</p>
                         </div>
                     </div>
-
-                    ${state.currentDay <= 75 ? `
-                        <button onclick="nav('daily')" class="w-full bg-white text-slate-900 hover:bg-gray-200 py-5 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl mb-10 transition active:scale-95 flex justify-center items-center gap-3">
-                            <span class="text-2xl leading-none">📝</span> Log Today's Progress
-                        </button>
-                    ` : ''}
 
                     <div class="glass p-6 rounded-3xl shadow-xl">
                         <div class="grid grid-cols-5 md:grid-cols-10 gap-2">${gridHtml}</div>
@@ -148,7 +158,7 @@
                 <div class="pt-8">
                     <button onclick="nav('grid')" class="text-slate-500 text-[10px] font-black uppercase mb-8 tracking-[0.2em] hover:text-white transition">← Back to Grid</button>
                     
-                    <h2 class="text-3xl font-black italic uppercase tracking-tight text-white mb-2">Day ${state.currentDay}</h2>
+                    <h2 class="text-3xl font-black italic uppercase tracking-tight text-white mb-2">Day ${state.viewingDay}</h2>
                     <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Check them off as you go.</p>
 
                     <div class="glass p-6 rounded-3xl mb-10 shadow-xl space-y-4">
@@ -173,6 +183,11 @@
             state.view = view;
             window.scrollTo(0, 0);
             save();
+        }
+
+        function openDay(dayNumber) {
+            state.viewingDay = dayNumber;
+            nav('daily');
         }
 
         function updateTask(index, val) {
@@ -209,32 +224,26 @@
                 return;
             }
 
-            if (!state.completedDays.includes(state.currentDay)) {
-                state.completedDays.push(state.currentDay);
+            if (!state.completedDays.includes(state.viewingDay)) {
+                state.completedDays.push(state.viewingDay);
             }
-            state.currentDay++;
             nav('grid');
         }
 
         function submitIncomplete() {
             if (confirm("Log today as an incomplete day? It will show up orange on your grid.")) {
-                if (!state.incompleteDays.includes(state.currentDay)) {
-                    state.incompleteDays.push(state.currentDay);
+                if (!state.incompleteDays.includes(state.viewingDay)) {
+                    state.incompleteDays.push(state.viewingDay);
                 }
-                state.currentDay++;
                 nav('grid');
             }
         }
 
-        // This is the new Hard Reset
         function hardReset() {
             if (confirm("DANGER: This will wipe all your progress AND let you re-write your rules. Go back to Setup?")) {
                 state.locked = false;
-                state.currentDay = 1;
                 state.completedDays = [];
                 state.incompleteDays = [];
-                // Note: We leave the 'name' and 'tasks' as they currently are, 
-                // so they don't have to re-type everything if they just want to make a small tweak.
                 nav('setup');
             }
         }
