@@ -35,14 +35,13 @@
             locked: false,
             completedDays: [],
             incompleteDays: [],
-            viewingDay: 1, // Used to track which day is currently opened in the checklist
+            viewingDay: 1, 
             view: 'setup' 
         };
 
-        // Safety checks for older saves
         if (!state.incompleteDays) state.incompleteDays = [];
 
-        // Calculate the actual active day based on what's been logged
+        // Calculate the highest day they've reached
         function getActiveDay() {
             if (state.completedDays.length === 0 && state.incompleteDays.length === 0) return 1;
             return Math.max(0, ...state.completedDays, ...state.incompleteDays) + 1;
@@ -102,26 +101,28 @@
                 const isDone = state.completedDays.includes(i);
                 const isFailed = state.incompleteDays.includes(i);
                 const isActive = i === activeDay;
-                const isLocked = i > activeDay;
+                const isFuture = i > activeDay;
                 
                 let classes = "grid-box ";
                 let content = i;
                 let tag = "div";
                 let onClick = "";
                 
-                if (isDone) {
-                    classes += "bg-green-500 border-green-500 text-slate-900 shadow-lg shadow-green-500/20";
-                    content = '✓';
-                } else if (isFailed) {
-                    classes += "bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20";
-                    content = '✕';
-                } else if (isActive) {
-                    // Make the current day a clickable button
+                if (isActive) {
                     tag = "button";
                     classes += "border-blue-500 text-blue-500 animate-pulse hover:bg-blue-600 hover:text-white cursor-pointer shadow-lg shadow-blue-500/20";
                     onClick = `onclick="openDay(${i})"`;
-                } else if (isLocked) {
-                    // Dim out future days
+                } else if (isDone) {
+                    tag = "button";
+                    classes += "bg-green-500 border-green-500 text-slate-900 shadow-lg shadow-green-500/20 hover:bg-green-400 cursor-pointer";
+                    content = '✓';
+                    onClick = `onclick="openDay(${i})"`;
+                } else if (isFailed) {
+                    tag = "button";
+                    classes += "bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20 hover:bg-orange-400 cursor-pointer";
+                    content = '✕';
+                    onClick = `onclick="openDay(${i})"`;
+                } else if (isFuture) {
                     classes += "bg-slate-900/30 text-slate-700 opacity-40 cursor-not-allowed";
                 }
                 
@@ -129,7 +130,7 @@
             }
 
             const headerTitle = activeDay > 75 ? "Challenge Complete 🏆" : `Day ${activeDay} of 75`;
-            const headerSubtitle = activeDay > 75 ? "You made it to the end." : "Tap the pulsing day to log progress.";
+            const headerSubtitle = activeDay > 75 ? "You made it to the end." : "Tap the pulsing day to log progress. Tap past days to edit.";
 
             root.innerHTML = `
                 <div class="pt-8">
@@ -154,6 +155,9 @@
 
         // 3. DAILY TRACKER VIEW
         function renderDaily(root) {
+            // Check if they are looking at a day they already completed to pre-check the boxes
+            const isAlreadyCompleted = state.completedDays.includes(state.viewingDay);
+
             root.innerHTML = `
                 <div class="pt-8">
                     <button onclick="nav('grid')" class="text-slate-500 text-[10px] font-black uppercase mb-8 tracking-[0.2em] hover:text-white transition">← Back to Grid</button>
@@ -164,7 +168,7 @@
                     <div class="glass p-6 rounded-3xl mb-10 shadow-xl space-y-4">
                         ${state.tasks.map((t, i) => `
                             <div class="bg-white/5 p-4 rounded-2xl flex items-center gap-4 border border-white/5">
-                                <input type="checkbox" id="task-${i}" class="daily-check w-6 h-6 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0 cursor-pointer">
+                                <input type="checkbox" id="task-${i}" ${isAlreadyCompleted ? 'checked' : ''} class="daily-check w-6 h-6 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0 cursor-pointer">
                                 <label for="task-${i}" class="text-sm font-bold text-white cursor-pointer select-none">${t}</label>
                             </div>
                         `).join('')}
@@ -224,6 +228,10 @@
                 return;
             }
 
+            // Remove from incomplete array if it was there
+            state.incompleteDays = state.incompleteDays.filter(d => d !== state.viewingDay);
+            
+            // Add to completed array if not there
             if (!state.completedDays.includes(state.viewingDay)) {
                 state.completedDays.push(state.viewingDay);
             }
@@ -231,7 +239,11 @@
         }
 
         function submitIncomplete() {
-            if (confirm("Log today as an incomplete day? It will show up orange on your grid.")) {
+            if (confirm(`Log Day ${state.viewingDay} as incomplete?`)) {
+                // Remove from completed array if it was there
+                state.completedDays = state.completedDays.filter(d => d !== state.viewingDay);
+                
+                // Add to incomplete array if not there
                 if (!state.incompleteDays.includes(state.viewingDay)) {
                     state.incompleteDays.push(state.viewingDay);
                 }
