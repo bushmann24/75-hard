@@ -175,7 +175,7 @@
 
             root.innerHTML = `
                 <div class="pt-8 animate-fade-in">
-                    <h1 class="text-4xl font-black italic uppercase tracking-tight text-slate-950 mb-2">75 HARD</h1>
+                    <h1 class="text-3xl sm:text-4xl font-black italic uppercase tracking-tight text-slate-950 mb-2 pr-2">75 HARD</h1>
                     <p class="text-slate-600 text-sm font-bold uppercase tracking-widest mb-8">Commit to the journey.</p>
                     
                     <div class="glass p-6 rounded-3xl mb-8 shadow-xl">
@@ -274,8 +274,8 @@
                     <div class="flex justify-between items-end mb-8">
                         <div>
                             <p class="text-slate-600 text-[10px] font-black uppercase tracking-widest mb-1">${state.name ? state.name + "'s" : "Your"} Journey</p>
-                            <h1 class="text-4xl font-black italic uppercase tracking-tight leading-none ${titleClass}">${headerTitle}</h1>
-                            <p class="text-blue-600 text-xs font-bold mt-3">${headerSubtitle}</p>
+                            <h1 class="text-3xl sm:text-4xl font-black italic uppercase tracking-tight leading-none pr-2 py-1 ${titleClass}">${headerTitle}</h1>
+                            <p class="text-blue-600 text-xs font-bold mt-2">${headerSubtitle}</p>
                         </div>
                     </div>
 
@@ -310,6 +310,10 @@
             const totalWater = todayMetrics.waterLogs.reduce((sum, amt) => sum + amt, 0);
             const totalCals = todayMetrics.food.reduce((sum, item) => sum + item.cals, 0);
 
+            // Calculations for amounts left
+            const waterLeft = Math.max(0, state.waterGoal - totalWater);
+            const calsLeft = Math.max(0, state.calorieGoal - totalCals);
+
             let checkedTasks = todayMetrics.checkedTasks;
             if (!checkedTasks) {
                 checkedTasks = state.tasks.map(() => isAlreadyCompleted);
@@ -322,13 +326,16 @@
                 <div class="pt-8 animate-fade-in">
                     <button onclick="nav('grid')" class="bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase px-5 py-2.5 rounded-lg mb-8 tracking-widest transition shadow-md border border-slate-300">Back</button>
                     
-                    <h2 class="text-3xl font-black italic uppercase tracking-tight text-slate-950 mb-2">Day ${state.viewingDay}</h2>
+                    <h2 class="text-3xl sm:text-4xl font-black italic uppercase tracking-tight text-slate-950 mb-2 pr-2">Day ${state.viewingDay}</h2>
                     <p class="text-slate-600 text-xs font-bold uppercase tracking-widest mb-8">Check them off as you go.</p>
 
                     <div class="glass p-6 rounded-3xl mb-4 shadow-xl border border-slate-200">
-                        <div class="flex justify-between items-end border-b border-slate-200 pb-2 mb-4">
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4">
                             <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Water Log</h3>
-                            <span class="${waterColor} font-bold text-sm">${totalWater} / ${state.waterGoal} ml</span>
+                            <div class="text-right">
+                                <div class="${waterColor} font-bold text-sm leading-none">${totalWater} / ${state.waterGoal} ml</div>
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">${waterLeft} ml left</div>
+                            </div>
                         </div>
                         <div class="space-y-2 mb-4">
                             ${todayMetrics.waterLogs.map((w, i) => `
@@ -348,9 +355,12 @@
                     </div>
 
                     <div class="glass p-6 rounded-3xl mb-6 shadow-xl border border-slate-200">
-                        <div class="flex justify-between items-end border-b border-slate-200 pb-2 mb-4">
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4">
                             <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Food Log</h3>
-                            <span class="${calColor} font-bold text-sm">${totalCals} / ${state.calorieGoal} kcal</span>
+                            <div class="text-right">
+                                <div class="${calColor} font-bold text-sm leading-none">${totalCals} / ${state.calorieGoal} kcal</div>
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">${calsLeft} kcal left</div>
+                            </div>
                         </div>
                         <div class="space-y-2 mb-4">
                             ${todayMetrics.food.map((f, i) => `
@@ -420,7 +430,7 @@
                     </div>
 
                     <div class="mb-10 mt-6">
-                        <h1 class="text-6xl font-black italic uppercase tracking-tight bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent drop-shadow-sm mb-2">${vTitle}</h1>
+                        <h1 class="text-5xl sm:text-6xl font-black italic uppercase tracking-tight bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent drop-shadow-sm mb-2 pr-2 py-1">${vTitle}</h1>
                         <p class="text-slate-800 text-sm font-bold uppercase tracking-widest">${vSubtitle}</p>
                     </div>
 
