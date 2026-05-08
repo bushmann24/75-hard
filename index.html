@@ -7,47 +7,20 @@
     
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+    
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         
-        /* Global Light Theme & Anti-Zoom Overrides */
-        html {
-            /* Prevents font-scaling in landscape and accessibility modes */
-            -webkit-text-size-adjust: 100%;
-            text-size-adjust: 100%;
-        }
-
-        body { 
-            background-color: #ffffff; 
-            color: #0f172a; 
-            font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-            /* Extra layer of protection for text scaling */
-            -webkit-text-size-adjust: 100%;
-        }
-        
-        .glass { 
-            background: #ffffff; 
-            border: 1px solid #e2e8f0; 
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04); 
-        }
-        
-        .grid-box { 
-            aspect-ratio: 1/1; 
-            border-radius: 6px; 
-            border: 1px solid #e2e8f0; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 11px; 
-            font-weight: 900; 
-            transition: all 0.2s; 
-        }
-        
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        body { background-color: #ffffff; color: #0f172a; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+        .glass { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04); }
+        .grid-box { aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; transition: all 0.2s; }
         input[type="checkbox"]:checked + label { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
@@ -56,7 +29,6 @@
     <div id="app" class="w-full max-w-xl"></div>
 
     <script>
-        // --- DEFAULT SETUP ---
         const DEFAULT_TASKS = [
             "Take a daily progress pic",
             "1st 45 minute workout",
@@ -65,7 +37,6 @@
             "No cheat meals or alcohol"
         ];
 
-        // --- APP STATE ---
         let state = JSON.parse(localStorage.getItem('75hard_state')) || {
             name: "",
             waterGoal: 4000, 
