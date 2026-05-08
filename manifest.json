@@ -1,11 +1,12 @@
 {
-  "short_name": "75 Custom",
-  "name": "75 Custom Challenge",
+  "short_name": "75 Hard",
+  "name": "75 Hard Challenge",
   "icons": [
     {
       "src": "icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     }
   ],
   "start_url": ".",
