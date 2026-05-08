@@ -8,14 +8,21 @@
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
-        .grid-box { aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #1e293b; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; transition: all 0.2s; }
+        /* Global Light Theme Overrides */
+        body { background-color: #ffffff; color: #0f172a; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        /* Updated Glass Container for Light Theme: solid white with shadow */
+        .glass { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04); }
+        
+        /* Updated Grid box borders */
+        .grid-box { aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; transition: all 0.2s; }
+        
+        /* Checkbox label strikethrough color remains gray */
         input[type="checkbox"]:checked + label { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
@@ -82,53 +89,53 @@
         function renderSetup(root) {
             let tasksHtml = '';
 
-            // The Read-Only List (Now merged into a single box)
+            // The Read-Only Manifesto List (Merged into a light gray box)
             if (!state.editingRules) {
                 tasksHtml = `
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 text-center">Your Non-Negotiables</label>
-                    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5 mb-2 shadow-inner">
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-2">
                         ${state.tasks.map((t, i, arr) => `
-                            <div class="text-sm text-white font-bold text-center ${i !== arr.length - 1 ? 'border-b border-slate-800 pb-3 mb-3' : ''}">
+                            <div class="text-sm text-slate-950 font-bold text-center ${i !== arr.length - 1 ? 'border-b border-slate-200 pb-3 mb-3' : ''}">
                                 ${t}
                             </div>
                         `).join('')}
                     </div>
                 `;
             } 
-            // The Edit Mode List (Kept Left-Aligned for easy editing)
+            // The Edit Mode List (Kept Left-Aligned with new Light Mode inputs)
             else {
                 tasksHtml = `
-                    <label class="block text-xs font-bold text-blue-400 uppercase tracking-widest mb-4">Edit Your Rules</label>
+                    <label class="block text-xs font-bold text-blue-600 uppercase tracking-widest mb-4">Edit Your Rules</label>
                     <div id="task-list" class="space-y-3 mb-4">
                         ${state.tasks.map((t, i) => `
                             <div class="flex gap-2">
-                                <input type="text" onchange="updateTask(${i}, this.value)" value="${t}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500">
-                                <button onclick="removeTask(${i})" class="bg-red-500/10 text-red-500 px-4 rounded-xl font-bold hover:bg-red-500/20 transition">✕</button>
+                                <input type="text" onchange="updateTask(${i}, this.value)" value="${t}" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-950 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                <button onclick="removeTask(${i})" class="bg-red-500/10 text-red-600 px-4 rounded-xl font-bold hover:bg-red-500/20 transition">✕</button>
                             </div>
                         `).join('')}
                     </div>
-                    <button onclick="addTask()" class="w-full py-3 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 font-bold uppercase text-xs hover:border-slate-500 hover:text-slate-300 transition mb-2">+ Add Custom Rule</button>
+                    <button onclick="addTask()" class="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold uppercase text-xs hover:border-slate-400 hover:text-slate-600 transition mb-2">+ Add Custom Rule</button>
                 `;
             }
 
             root.innerHTML = `
                 <div class="pt-8 animate-fade-in">
-                    <h1 class="text-4xl font-black italic uppercase tracking-tight text-white mb-2">75 CUSTOM</h1>
-                    <p class="text-slate-400 text-sm font-bold uppercase tracking-widest mb-8">Commit to the journey.</p>
+                    <h1 class="text-4xl font-black italic uppercase tracking-tight text-slate-950 mb-2">75 CUSTOM</h1>
+                    <p class="text-slate-600 text-sm font-bold uppercase tracking-widest mb-8">Commit to the journey.</p>
                     
                     <div class="glass p-6 rounded-3xl mb-8 shadow-xl">
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Your Name</label>
-                        <input type="text" id="userName" value="${state.name}" placeholder="Enter your name..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white font-bold mb-6 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="userName" value="${state.name}" placeholder="Enter your name..." class="w-full bg-white border border-slate-300 rounded-xl p-4 text-slate-950 font-bold mb-6 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
                         
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Daily Targets</label>
                         <div class="flex gap-3 mb-8">
                             <div class="flex-1">
-                                <label class="block text-[10px] text-blue-400 font-bold uppercase mb-1">Water (ml)</label>
-                                <input type="number" id="setupWater" value="${state.waterGoal}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white font-bold focus:outline-none focus:border-blue-500">
+                                <label class="block text-[10px] text-blue-600 font-bold uppercase mb-1">Water (ml)</label>
+                                <input type="number" id="setupWater" value="${state.waterGoal}" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-slate-950 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
                             </div>
                             <div class="flex-1">
-                                <label class="block text-[10px] text-orange-400 font-bold uppercase mb-1">Calories (kcal)</label>
-                                <input type="number" id="setupCals" value="${state.calorieGoal}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white font-bold focus:outline-none focus:border-orange-500">
+                                <label class="block text-[10px] text-orange-600 font-bold uppercase mb-1">Calories (kcal)</label>
+                                <input type="number" id="setupCals" value="${state.calorieGoal}" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-slate-950 font-bold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500">
                             </div>
                         </div>
 
@@ -138,7 +145,7 @@
                     <button onclick="lockIn()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl shadow-blue-600/20 transition active:scale-95">Lock It In</button>
                     
                     <div class="mt-8 text-center">
-                        <button onclick="toggleEditRules()" class="border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-md">
+                        <button onclick="toggleEditRules()" class="border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-md">
                             ${state.editingRules ? "Done Editing" : "Edit the non-negotiables"}
                         </button>
                     </div>
@@ -164,20 +171,20 @@
                 
                 if (isActive) {
                     tag = "button";
-                    classes += "border-blue-500 text-blue-500 animate-pulse hover:bg-blue-600 hover:text-white cursor-pointer shadow-lg shadow-blue-500/20";
+                    classes += "border-blue-500 text-blue-600 animate-pulse hover:bg-blue-600 hover:text-white cursor-pointer shadow-lg shadow-blue-500/20";
                     onClick = `onclick="openDay(${i})"`;
                 } else if (isDone) {
                     tag = "button";
-                    classes += "bg-green-500 border-green-500 text-slate-900 shadow-lg shadow-green-500/20 hover:bg-green-400 cursor-pointer";
+                    classes += "bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 cursor-pointer";
                     content = '✓';
                     onClick = `onclick="openDay(${i})"`;
                 } else if (isFailed) {
                     tag = "button";
-                    classes += "bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20 hover:bg-orange-400 cursor-pointer";
+                    classes += "bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-700 cursor-pointer";
                     content = '✕';
                     onClick = `onclick="openDay(${i})"`;
                 } else if (isFuture) {
-                    classes += "bg-slate-900/30 text-slate-700 opacity-40 cursor-not-allowed";
+                    classes += "bg-slate-100 text-slate-400 opacity-40 cursor-not-allowed";
                 }
                 
                 gridHtml += `<${tag} ${onClick} class="${classes}">${content}</${tag}>`;
@@ -190,18 +197,18 @@
                 <div class="pt-8">
                     <div class="flex justify-between items-end mb-8">
                         <div>
-                            <p class="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">${state.name ? state.name + "'s" : "Your"} Journey</p>
-                            <h1 class="text-4xl font-black italic uppercase tracking-tight text-white leading-none">${headerTitle}</h1>
-                            <p class="text-blue-400 text-xs font-bold mt-3">${headerSubtitle}</p>
+                            <p class="text-slate-600 text-[10px] font-black uppercase tracking-widest mb-1">${state.name ? state.name + "'s" : "Your"} Journey</p>
+                            <h1 class="text-4xl font-black italic uppercase tracking-tight text-slate-950 leading-none">${headerTitle}</h1>
+                            <p class="text-blue-600 text-xs font-bold mt-3">${headerSubtitle}</p>
                         </div>
                     </div>
 
-                    <div class="glass p-6 rounded-3xl shadow-xl">
+                    <div class="glass p-6 rounded-3xl shadow-xl border border-slate-200">
                         <div class="grid grid-cols-5 md:grid-cols-10 gap-2">${gridHtml}</div>
                     </div>
 
                     <div class="mt-12 text-center">
-                        <button onclick="hardReset()" class="text-slate-600 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.2em] transition">Restart & Change Rules</button>
+                        <button onclick="hardReset()" class="text-slate-500 hover:text-red-600 text-[10px] font-black uppercase tracking-[0.2em] transition">Restart & Change Rules</button>
                     </div>
                 </div>
             `;
@@ -221,29 +228,29 @@
                 checkedTasks = state.tasks.map(() => isAlreadyCompleted);
             }
 
-            const waterColor = totalWater >= state.waterGoal ? 'text-green-400' : 'text-blue-400';
-            const calColor = totalCals >= state.calorieGoal ? 'text-green-400' : 'text-orange-400';
+            const waterColor = totalWater >= state.waterGoal ? 'text-green-600' : 'text-blue-600';
+            const calColor = totalCals >= state.calorieGoal ? 'text-green-600' : 'text-orange-600';
 
             root.innerHTML = `
                 <div class="pt-8">
-                    <button onclick="nav('grid')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-black uppercase px-4 py-2 rounded-lg mb-8 tracking-widest transition shadow-md border border-slate-700">Back</button>
+                    <button onclick="nav('grid')" class="bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase px-5 py-2.5 rounded-lg mb-8 tracking-widest transition shadow-md border border-slate-300">Back</button>
                     
-                    <h2 class="text-3xl font-black italic uppercase tracking-tight text-white mb-2">Day ${state.viewingDay}</h2>
-                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Check them off as you go.</p>
+                    <h2 class="text-3xl font-black italic uppercase tracking-tight text-slate-950 mb-2">Day ${state.viewingDay}</h2>
+                    <p class="text-slate-600 text-xs font-bold uppercase tracking-widest mb-8">Check them off as you go.</p>
 
-                    <div class="glass p-6 rounded-3xl mb-4 shadow-xl">
-                        <div class="flex justify-between items-end border-b border-white/10 pb-2 mb-4">
+                    <div class="glass p-6 rounded-3xl mb-4 shadow-xl border border-slate-200">
+                        <div class="flex justify-between items-end border-b border-slate-200 pb-2 mb-4">
                             <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Water Log</h3>
                             <span class="${waterColor} font-bold text-sm">${totalWater} / ${state.waterGoal} ml</span>
                         </div>
                         
                         <div class="space-y-2 mb-4">
                             ${todayMetrics.waterLogs.map((w, i) => `
-                                <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                    <span class="text-sm text-white font-bold">Water</span>
+                                <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                                    <span class="text-sm text-slate-950 font-bold">Water</span>
                                     <div class="flex items-center gap-3">
-                                        <span class="text-sm text-blue-400 font-bold">${w} ml</span>
-                                        <button onclick="removeWater(${i})" class="text-red-500 hover:text-red-400 font-black text-sm px-2">✕</button>
+                                        <span class="text-sm text-blue-600 font-bold">${w} ml</span>
+                                        <button onclick="removeWater(${i})" class="text-red-600 hover:text-red-700 font-black text-sm px-2">✕</button>
                                     </div>
                                 </div>
                             `).join('')}
@@ -251,24 +258,24 @@
                         </div>
 
                         <div class="flex gap-2">
-                            <input type="number" id="waterAmount" placeholder="Amount in ml (e.g. 500)" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white font-bold focus:outline-none focus:border-blue-500">
-                            <button onclick="addWater()" class="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-6 rounded-xl font-black transition active:scale-95">+</button>
+                            <input type="number" id="waterAmount" placeholder="ml (e.g. 500)" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-950 font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                            <button onclick="addWater()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-6 rounded-xl font-black transition active:scale-95">+</button>
                         </div>
                     </div>
 
-                    <div class="glass p-6 rounded-3xl mb-6 shadow-xl">
-                        <div class="flex justify-between items-end border-b border-white/10 pb-2 mb-4">
+                    <div class="glass p-6 rounded-3xl mb-6 shadow-xl border border-slate-200">
+                        <div class="flex justify-between items-end border-b border-slate-200 pb-2 mb-4">
                             <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Food Log</h3>
                             <span class="${calColor} font-bold text-sm">${totalCals} / ${state.calorieGoal} kcal</span>
                         </div>
                         
                         <div class="space-y-2 mb-4">
                             ${todayMetrics.food.map((f, i) => `
-                                <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                    <span class="text-sm text-white font-bold">${f.name}</span>
+                                <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                                    <span class="text-sm text-slate-950 font-bold">${f.name}</span>
                                     <div class="flex items-center gap-3">
-                                        <span class="text-sm text-orange-400 font-bold">${f.cals} kcal</span>
-                                        <button onclick="removeFood(${i})" class="text-red-500 hover:text-red-400 font-black text-sm px-2">✕</button>
+                                        <span class="text-sm text-orange-600 font-bold">${f.cals} kcal</span>
+                                        <button onclick="removeFood(${i})" class="text-red-600 hover:text-red-700 font-black text-sm px-2">✕</button>
                                     </div>
                                 </div>
                             `).join('')}
@@ -276,25 +283,25 @@
                         </div>
 
                         <div class="flex gap-2">
-                            <input type="text" id="foodName" placeholder="Meal (e.g. Pasta)" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white font-bold focus:outline-none focus:border-orange-500">
-                            <input type="number" id="foodCals" placeholder="kcal" class="w-24 bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white font-bold focus:outline-none focus:border-orange-500">
-                            <button onclick="addFood()" class="bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 px-4 rounded-xl font-black transition active:scale-95">+</button>
+                            <input type="text" id="foodName" placeholder="Meal (e.g. Pasta)" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-950 font-bold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500">
+                            <input type="number" id="foodCals" placeholder="kcal" class="w-24 bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-950 font-bold focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500">
+                            <button onclick="addFood()" class="bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 rounded-xl font-black transition active:scale-95">+</button>
                         </div>
                     </div>
 
-                    <div class="glass p-6 rounded-3xl mb-10 shadow-xl space-y-4">
-                        <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Non-Negotiables (Required to Complete Day)</h3>
+                    <div class="glass p-6 rounded-3xl mb-10 shadow-xl space-y-4 border border-slate-200">
+                        <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4">Non-Negotiables (Required to Complete Day)</h3>
                         ${state.tasks.map((t, i) => `
-                            <div class="bg-white/5 p-4 rounded-2xl flex items-center gap-4 border border-white/5">
-                                <input type="checkbox" id="task-${i}" ${checkedTasks[i] ? 'checked' : ''} onchange="toggleTask(${i}, this.checked)" class="daily-check w-6 h-6 rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0 cursor-pointer">
-                                <label for="task-${i}" class="text-sm font-bold text-white cursor-pointer select-none">${t}</label>
+                            <div class="bg-slate-50 p-4 rounded-2xl flex items-center gap-4 border border-slate-200">
+                                <input type="checkbox" id="task-${i}" ${checkedTasks[i] ? 'checked' : ''} onchange="toggleTask(${i}, this.checked)" class="daily-check w-6 h-6 rounded bg-white border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                                <label for="task-${i}" class="text-sm font-bold text-slate-950 cursor-pointer select-none">${t}</label>
                             </div>
                         `).join('')}
                     </div>
 
                     <div class="flex flex-col gap-4">
                         <button onclick="submitDay()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl shadow-blue-600/20 transition active:scale-95">Complete Day</button>
-                        <button onclick="submitIncomplete()" class="w-full bg-orange-600/10 text-orange-500 hover:bg-orange-600/20 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition active:scale-95 border border-orange-500/20">Mark as Incomplete</button>
+                        <button onclick="submitIncomplete()" class="w-full bg-orange-100 text-orange-700 hover:bg-orange-200 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition active:scale-95 border border-orange-200">Mark as Incomplete</button>
                     </div>
                 </div>
             `;
