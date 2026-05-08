@@ -13,6 +13,7 @@
     <meta name="mobile-web-app-capable" content="yes">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         
@@ -28,6 +29,9 @@
         input[type="checkbox"]:checked + label { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         #backupModal textarea { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen flex justify-center pb-20">
@@ -100,7 +104,12 @@
         }
 
         if (state.locked && state.view === 'setup') {
-            state.view = 'grid';
+            // Check if they already won so we load the right view on refresh
+            if (state.completedDays.length === 75) {
+                state.view = 'victory';
+            } else {
+                state.view = 'grid';
+            }
         }
 
         function save() {
@@ -114,6 +123,25 @@
             if (state.view === 'setup') renderSetup(root);
             else if (state.view === 'grid') renderGrid(root);
             else if (state.view === 'daily') renderDaily(root);
+            else if (state.view === 'victory') renderVictory(root);
+        }
+
+        // --- VICTORY CONFETTI ANIMATION ---
+        function fireVictoryConfetti() {
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+            function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) { return clearInterval(interval); }
+                var particleCount = 50 * (timeLeft / duration);
+                
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
         }
 
         // Views
@@ -185,12 +213,13 @@
 
         function renderGrid(root) {
             const activeDay = getActiveDay();
+            const isVictory = state.completedDays.length === 75; 
             let gridHtml = '';
             
             for (let i = 1; i <= 75; i++) {
                 const isDone = state.completedDays.includes(i);
                 const isFailed = state.incompleteDays.includes(i);
-                const isActive = i === activeDay;
+                const isActive = i === activeDay && !isVictory;
                 const isFuture = i > activeDay;
                 
                 let classes = "grid-box ";
@@ -204,7 +233,13 @@
                     onClick = `onclick="openDay(${i})"`;
                 } else if (isDone) {
                     tag = "button";
-                    classes += "bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 cursor-pointer";
+                    if (isVictory) {
+                        // Golden Grid Edition
+                        classes += "bg-gradient-to-br from-yellow-400 to-yellow-500 border-yellow-500 text-yellow-950 shadow-md shadow-yellow-500/30 hover:brightness-110 cursor-pointer";
+                    } else {
+                        // Standard Green
+                        classes += "bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 cursor-pointer";
+                    }
                     content = '✓';
                     onClick = `onclick="openDay(${i})"`;
                 } else if (isFailed) {
@@ -219,20 +254,26 @@
                 gridHtml += `<${tag} ${onClick} class="${classes}">${content}</${tag}>`;
             }
 
-            const headerTitle = activeDay > 75 ? "Challenge Complete 🏆" : `Day ${activeDay} of 75`;
-            const headerSubtitle = activeDay > 75 ? "You made it to the end." : "Log your daily progress below.";
+            const headerTitle = isVictory ? "Challenge Complete 🏆" : `Day ${activeDay} of 75`;
+            const headerSubtitle = isVictory ? "You made it to the end." : "Log your daily progress below.";
+            
+            // Dynamic styling based on completion
+            const titleClass = isVictory ? "bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent" : "text-slate-950";
+            const borderClass = isVictory ? "border-2 border-yellow-400/50 shadow-yellow-500/20 ring-4 ring-yellow-400/10" : "border border-slate-200 shadow-xl";
 
             root.innerHTML = `
-                <div class="pt-8">
+                <div class="pt-8 animate-fade-in">
+                    ${isVictory ? `<button onclick="nav('victory')" class="bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase px-5 py-2.5 rounded-lg mb-6 tracking-widest transition shadow-md border border-slate-300">Back to Stats</button>` : ''}
+                    
                     <div class="flex justify-between items-end mb-8">
                         <div>
                             <p class="text-slate-600 text-[10px] font-black uppercase tracking-widest mb-1">${state.name ? state.name + "'s" : "Your"} Journey</p>
-                            <h1 class="text-4xl font-black italic uppercase tracking-tight text-slate-950 leading-none">${headerTitle}</h1>
+                            <h1 class="text-4xl font-black italic uppercase tracking-tight leading-none ${titleClass}">${headerTitle}</h1>
                             <p class="text-blue-600 text-xs font-bold mt-3">${headerSubtitle}</p>
                         </div>
                     </div>
 
-                    <div class="glass p-6 rounded-3xl shadow-xl border border-slate-200">
+                    <div class="glass p-6 rounded-3xl ${borderClass}">
                         <div class="grid grid-cols-5 md:grid-cols-10 gap-2">${gridHtml}</div>
                     </div>
 
@@ -241,7 +282,7 @@
                         
                         <button onclick="openBackupModal('full')" class="text-slate-400 hover:text-slate-600 text-[9px] font-black uppercase tracking-[0.1em] transition border border-slate-200 px-3 py-1.5 rounded-lg">Backup / Restore Progress</button>
                         
-                        <button onclick="devFinish74()" class="text-purple-600 hover:bg-purple-50 hover:text-purple-700 text-[9px] font-black uppercase tracking-[0.1em] transition border border-purple-200 bg-purple-50/50 px-4 py-2 rounded-lg mt-4">Dev Test: Finish 74</button>
+                        ${!isVictory ? `<button onclick="devFinish74()" class="text-purple-600 hover:bg-purple-50 hover:text-purple-700 text-[9px] font-black uppercase tracking-[0.1em] transition border border-purple-200 bg-purple-50/50 px-4 py-2 rounded-lg mt-4">Dev Test: Finish 74</button>` : ''}
                     </div>
                 </div>
             `;
@@ -264,7 +305,7 @@
             const calColor = totalCals >= state.calorieGoal ? 'text-green-600' : 'text-orange-600';
 
             root.innerHTML = `
-                <div class="pt-8">
+                <div class="pt-8 animate-fade-in">
                     <button onclick="nav('grid')" class="bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase px-5 py-2.5 rounded-lg mb-8 tracking-widest transition shadow-md border border-slate-300">Back</button>
                     
                     <h2 class="text-3xl font-black italic uppercase tracking-tight text-slate-950 mb-2">Day ${state.viewingDay}</h2>
@@ -329,6 +370,64 @@
                         <button onclick="submitDay()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl shadow-blue-600/20 transition active:scale-95">Complete Day</button>
                         <button onclick="submitIncomplete()" class="w-full bg-orange-100 text-orange-700 hover:bg-orange-200 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition active:scale-95 border border-orange-200">Mark as Incomplete</button>
                     </div>
+                </div>
+            `;
+        }
+
+        // NEW: Victory Screen Render
+        function renderVictory(root) {
+            let totalWater = 0;
+            let totalMeals = 0;
+            let totalCals = 0;
+
+            // Tally up lifetime stats
+            for (let day in state.metrics) {
+                const dayMetrics = state.metrics[day];
+                if (dayMetrics.waterLogs) {
+                    totalWater += dayMetrics.waterLogs.reduce((a, b) => a + b, 0);
+                }
+                if (dayMetrics.food) {
+                    totalCals += dayMetrics.food.reduce((a, b) => a + b.cals, 0);
+                    totalMeals += dayMetrics.food.length;
+                }
+            }
+
+            const totalLiters = (totalWater / 1000).toFixed(1);
+
+            root.innerHTML = `
+                <div class="pt-8 animate-fade-in flex flex-col items-center text-center">
+                    <div class="w-full flex justify-start mb-4">
+                        <button onclick="nav('grid')" class="bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase px-5 py-2.5 rounded-lg tracking-widest transition shadow-md border border-slate-300">View Golden Grid</button>
+                    </div>
+
+                    <div class="mb-10 mt-6">
+                        <h1 class="text-6xl font-black italic uppercase tracking-tight bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent drop-shadow-sm mb-2">VICTORY</h1>
+                        <p class="text-slate-800 text-sm font-bold uppercase tracking-widest">75 Days of Unbreakable Discipline.</p>
+                    </div>
+
+                    <div class="glass p-8 rounded-3xl w-full max-w-md shadow-2xl border-2 border-yellow-400/50 mb-8 relative overflow-hidden bg-gradient-to-b from-yellow-50 to-white">
+                        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300"></div>
+                        <h2 class="text-xl font-black text-slate-900 uppercase tracking-wider mb-8">${state.name ? state.name + "'s" : "Your"} Final Stats</h2>
+
+                        <div class="space-y-5 text-left">
+                            <div class="flex justify-between items-center border-b border-yellow-200 pb-3">
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Water Drank</span>
+                                <span class="text-lg font-black text-blue-600">${totalLiters} Liters</span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-yellow-200 pb-3">
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Meals Tracked</span>
+                                <span class="text-lg font-black text-orange-600">${totalMeals}</span>
+                            </div>
+                            <div class="flex justify-between items-center border-b border-yellow-200 pb-3">
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Days Conquered</span>
+                                <span class="text-lg font-black text-green-600">75 / 75</span>
+                            </div>
+                        </div>
+
+                        <p class="mt-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">Screenshot to share your victory!</p>
+                    </div>
+
+                    <button onclick="fireVictoryConfetti()" class="text-yellow-600 hover:bg-yellow-50 text-[10px] font-black uppercase tracking-[0.1em] transition border border-yellow-200 bg-yellow-50/50 px-6 py-3 rounded-xl mb-12 shadow-sm">Celebrate Again 🎉</button>
                 </div>
             `;
         }
@@ -442,11 +541,20 @@
             const checkboxes = document.querySelectorAll('.daily-check');
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
             if (!allChecked) return alert("You haven't ticked all your Non-Negotiable boxes!");
+            
             ensureMetricsExist();
             state.metrics[state.viewingDay].checkedTasks = Array.from(checkboxes).map(cb => cb.checked);
             state.incompleteDays = state.incompleteDays.filter(d => d !== state.viewingDay);
+            
             if (!state.completedDays.includes(state.viewingDay)) state.completedDays.push(state.viewingDay);
-            nav('grid');
+            
+            // Check for Victory!
+            if (state.completedDays.length === 75) {
+                nav('victory');
+                fireVictoryConfetti();
+            } else {
+                nav('grid');
+            }
         }
 
         function submitIncomplete() {
@@ -480,6 +588,12 @@
                 state.completedDays = [];
                 for (let i = 1; i <= 74; i++) {
                     state.completedDays.push(i);
+                    // Add some dummy metrics so the victory screen has fun numbers
+                    state.metrics[i] = {
+                        waterLogs: [2000, 2000],
+                        food: [{name: "Chicken Rice", cals: 800}, {name: "Protein Shake", cals: 400}],
+                        checkedTasks: state.tasks.map(() => true)
+                    };
                 }
                 state.incompleteDays = [];
                 nav('grid');
@@ -549,6 +663,12 @@
                     if (decodedData && decodedData.tasks && Array.isArray(decodedData.completedDays)) {
                         state = decodedData;
                         state.editingRules = false; 
+                        
+                        // Fix view state on restore if they already won
+                        if (state.completedDays.length === 75) {
+                            state.view = 'victory';
+                        }
+                        
                         save(); 
                         closeBackupModal();
                         alert("Progress restored successfully!");
