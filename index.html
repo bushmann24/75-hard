@@ -331,4 +331,144 @@
                 let oldWater = parseFloat(state.metrics[state.viewingDay].water) || 0;
                 if (oldWater > 0 && oldWater < 20) oldWater = Math.round(oldWater * 1000);
                 state.metrics[state.viewingDay].waterLogs = oldWater > 0 ? [oldWater] : [];
-                delete state.metrics[state.viewingD
+                delete state.metrics[state.viewingDay].water;
+            }
+
+            if (!state.metrics[state.viewingDay].waterLogs) state.metrics[state.viewingDay].waterLogs = [];
+            if (!state.metrics[state.viewingDay].food) state.metrics[state.viewingDay].food = [];
+        }
+
+        function toggleTask(index, isChecked) {
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].checkedTasks[index] = isChecked;
+            localStorage.setItem('75hard_state', JSON.stringify(state));
+        }
+
+        function addWater() {
+            const amountEl = document.getElementById('waterAmount');
+            const amount = parseInt(amountEl.value);
+            if (isNaN(amount) || amount <= 0) return alert("Please enter a valid amount in ml.");
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].waterLogs.push(amount);
+            amountEl.value = ""; 
+            save(); 
+        }
+
+        function removeWater(index) {
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].waterLogs.splice(index, 1);
+            save();
+        }
+
+        function addFood() {
+            const nameEl = document.getElementById('foodName');
+            const calsEl = document.getElementById('foodCals');
+            const name = nameEl.value.trim();
+            const cals = parseInt(calsEl.value);
+            if (!name || isNaN(cals)) return alert("Please enter both a meal name and calories.");
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].food.push({ name, cals });
+            nameEl.value = ""; 
+            calsEl.value = ""; 
+            save(); 
+        }
+
+        function removeFood(index) {
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].food.splice(index, 1);
+            save();
+        }
+
+        // Setup Handlers
+        function syncSetupForm() {
+            const nameEl = document.getElementById('userName');
+            const waterEl = document.getElementById('setupWater');
+            const calsEl = document.getElementById('setupCals');
+            if (nameEl) state.name = nameEl.value.trim();
+            if (waterEl) state.waterGoal = parseInt(waterEl.value) || 4000;
+            if (calsEl) state.calorieGoal = parseInt(calsEl.value) || 2500;
+        }
+
+        function toggleEditRules() {
+            syncSetupForm();
+            state.editingRules = !state.editingRules;
+            renderSetup(document.getElementById('app'));
+        }
+
+        function updateTask(index, val) { state.tasks[index] = val; }
+        
+        function removeTask(index) { 
+            syncSetupForm();
+            state.tasks.splice(index, 1); 
+            renderSetup(document.getElementById('app')); 
+        }
+        
+        function addTask() { 
+            syncSetupForm();
+            state.tasks.push("New rule"); 
+            renderSetup(document.getElementById('app')); 
+        }
+
+        function lockIn() {
+            syncSetupForm();
+
+            if (state.tasks.length === 0) return alert("You need at least one rule!");
+            
+            if (confirm("Once you start, you cannot change your rules. Ready to commit?")) {
+                state.locked = true;
+                nav('grid');
+            }
+        }
+
+        function submitDay() {
+            const checkboxes = document.querySelectorAll('.daily-check');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+            if (!allChecked) {
+                alert("You haven't ticked all your Non-Negotiable boxes! If you missed something, use the 'Mark as Incomplete' button.");
+                return;
+            }
+
+            ensureMetricsExist();
+            state.metrics[state.viewingDay].checkedTasks = Array.from(checkboxes).map(cb => cb.checked);
+
+            state.incompleteDays = state.incompleteDays.filter(d => d !== state.viewingDay);
+            if (!state.completedDays.includes(state.viewingDay)) {
+                state.completedDays.push(state.viewingDay);
+            }
+            nav('grid');
+        }
+
+        function submitIncomplete() {
+            if (confirm(`Log Day ${state.viewingDay} as incomplete?`)) {
+                ensureMetricsExist();
+                const checkboxes = document.querySelectorAll('.daily-check');
+                state.metrics[state.viewingDay].checkedTasks = Array.from(checkboxes).map(cb => cb.checked);
+
+                state.completedDays = state.completedDays.filter(d => d !== state.viewingDay);
+                if (!state.incompleteDays.includes(state.viewingDay)) {
+                    state.incompleteDays.push(state.viewingDay);
+                }
+                nav('grid');
+            }
+        }
+
+        function hardReset() {
+            if (confirm("DANGER: This will wipe all your progress AND let you re-write your rules. Go back to Setup?")) {
+                state.locked = false;
+                state.editingRules = false;
+                state.completedDays = [];
+                state.incompleteDays = [];
+                state.metrics = {}; 
+                state.tasks = [...DEFAULT_TASKS];
+                state.waterGoal = 4000;
+                state.calorieGoal = 2500;
+                nav('setup');
+            }
+        }
+
+        // Boot it up
+        render();
+    </script>
+</body>
+</html>
