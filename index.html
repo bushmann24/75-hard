@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>75 Custom Challenge</title>
+    <title>75 Hard Challenge</title>
     
-    <!-- THE APP ICON STUFF -->
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
     
-    <!-- MAKES IT FEEL LIKE A NATIVE APP -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="mobile-web-app-capable" content="yes">
@@ -25,10 +23,35 @@
         .grid-box { aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; transition: all 0.2s; }
         input[type="checkbox"]:checked + label { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* Utility classes for the backup modal */
+        #backupModal textarea { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen flex justify-center pb-20">
     <div id="app" class="w-full max-w-xl"></div>
+    
+    <div id="backupModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 shadow-2xl w-full max-w-lg border border-slate-200">
+            <h4 class="text-xl font-black italic uppercase text-slate-950 mb-1">Data Lifeline</h4>
+            <p class="text-slate-600 text-xs mb-6">Text this code to yourself to backup progress, or paste a code to restore.</p>
+            
+            <textarea id="backupCodeDisplay" readonly class="w-full h-40 bg-slate-50 border border-slate-200 rounded-xl p-4 text-[10px] font-mono text-slate-700 mb-6 select-all focus:outline-none focus:border-slate-300"></textarea>
+            
+            <div class="flex gap-3">
+                <button onclick="closeBackupModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-black uppercase rounded-xl transition">Close</button>
+                <button onclick="copyBackupCode()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase rounded-xl transition shadow-md">Copy Code</button>
+            </div>
+            
+            <div class="border-t border-slate-100 mt-8 pt-8">
+                <p class="text-[10px] text-slate-500 font-bold uppercase mb-2">Restore Progress</p>
+                <div class="flex gap-2">
+                    <input type="text" id="restoreInput" placeholder="Paste your backup code here..." class="flex-1 bg-white border border-slate-300 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500">
+                    <button onclick="restoreData()" class="py-3 px-6 bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase rounded-xl transition">Restore</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         const DEFAULT_TASKS = [
@@ -112,7 +135,7 @@
 
             root.innerHTML = `
                 <div class="pt-8 animate-fade-in">
-                    <h1 class="text-4xl font-black italic uppercase tracking-tight text-slate-950 mb-2">75 CUSTOM</h1>
+                    <h1 class="text-4xl font-black italic uppercase tracking-tight text-slate-950 mb-2">75 HARD</h1>
                     <p class="text-slate-600 text-sm font-bold uppercase tracking-widest mb-8">Commit to the journey.</p>
                     
                     <div class="glass p-6 rounded-3xl mb-8 shadow-xl">
@@ -136,7 +159,7 @@
 
                     <button onclick="lockIn()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl shadow-blue-600/20 transition active:scale-95">Lock It In</button>
                     
-                    <div class="mt-8 text-center">
+                    <div class="mt-8 text-center flex flex-col items-center gap-6">
                         <button onclick="toggleEditRules()" class="border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-md">
                             ${state.editingRules ? "Done Editing" : "Edit the non-negotiables"}
                         </button>
@@ -198,8 +221,10 @@
                         <div class="grid grid-cols-5 md:grid-cols-10 gap-2">${gridHtml}</div>
                     </div>
 
-                    <div class="mt-12 text-center">
+                    <div class="mt-12 text-center flex flex-col items-center gap-6">
                         <button onclick="hardReset()" class="text-slate-500 hover:text-red-600 text-[10px] font-black uppercase tracking-[0.2em] transition">Restart & Change Rules</button>
+                        
+                        <button onclick="openBackupModal()" class="text-slate-400 hover:text-slate-600 text-[9px] font-black uppercase tracking-[0.1em] transition border border-slate-200 px-3 py-1.5 rounded-lg">Backup/Restore Progress</button>
                     </div>
                 </div>
             `;
@@ -285,7 +310,7 @@
 
                     <div class="flex flex-col gap-4">
                         <button onclick="submitDay()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl shadow-blue-600/20 transition active:scale-95">Complete Day</button>
-                        <button onclick="submitIncomplete()" class="w-full bg-orange-100 text-orange-700 hover:bg-orange-200 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition active:scale-95">Mark as Incomplete</button>
+                        <button onclick="submitIncomplete()" class="w-full bg-orange-100 text-orange-700 hover:bg-orange-200 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition active:scale-95 border border-orange-200">Mark as Incomplete</button>
                     </div>
                 </div>
             `;
@@ -426,6 +451,63 @@
                 state.waterGoal = 4000;
                 state.calorieGoal = 2500;
                 nav('setup');
+            }
+        }
+        
+        // --- BACKUP & RESTORE UTILITIES ---
+        function openBackupModal() {
+            syncSetupForm(); // Make sure latest goals are included
+            const codeEl = document.getElementById('backupCodeDisplay');
+            const restoreIn = document.getElementById('restoreInput');
+            
+            // Prefix changed to 75HARD
+            const dataString = "75HARD-v1|" + btoa(JSON.stringify(state));
+            codeEl.value = dataString;
+            restoreIn.value = ""; // Clear restore input
+            
+            document.getElementById('backupModal').classList.remove('hidden');
+        }
+        
+        function closeBackupModal() {
+            document.getElementById('backupModal').classList.add('hidden');
+        }
+        
+        function copyBackupCode() {
+            const codeEl = document.getElementById('backupCodeDisplay');
+            codeEl.select();
+            document.execCommand('copy');
+            alert("Backup code copied to clipboard! Text it to yourself.");
+        }
+        
+        function restoreData() {
+            const input = document.getElementById('restoreInput').value.trim();
+            if (!input) return;
+            
+            // Supports both old 75C and new 75HARD prefixes for safety
+            if (!input.startsWith("75HARD-v1|") && !input.startsWith("75C-v1|")) {
+                alert("Invalid backup code format.");
+                return;
+            }
+            
+            if (confirm("DANGER: Restoring will overwrite your current progress. Are you sure?")) {
+                try {
+                    const base64part = input.split('|')[1];
+                    const decodedData = JSON.parse(atob(base64part));
+                    
+                    // Basic validation to ensure it's the right type of data
+                    if (decodedData && decodedData.tasks && Array.isArray(decodedData.completedDays)) {
+                        state = decodedData;
+                        state.editingRules = false; // Reset editing state
+                        save(); // This saves and re-renders the current view
+                        closeBackupModal();
+                        alert("Progress restored successfully!");
+                    } else {
+                        throw new Error("Invalid data structure");
+                    }
+                } catch (e) {
+                    alert("Failed to restore data. The code might be corrupted.");
+                    console.error(e);
+                }
             }
         }
 
