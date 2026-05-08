@@ -26,7 +26,7 @@
         .grid-box { aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; transition: all 0.2s; }
         
         /* Input styling */
-        input[type="checkbox"]:checked + label { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
+        input[type="checkbox"]:checked + .task-text { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         #backupModal textarea { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         
@@ -104,7 +104,6 @@
         }
 
         if (state.locked && state.view === 'setup') {
-            // Check if they already won so we load the right view on refresh
             if (getActiveDay() > 75) {
                 state.view = 'victory';
             } else {
@@ -236,20 +235,18 @@
                 } else if (isDone) {
                     tag = "button";
                     if (isGameOver) {
-                        // Golden Grid Edition for completed days at the end
                         classes += "bg-gradient-to-br from-yellow-400 to-yellow-500 border-yellow-500 text-yellow-950 shadow-md shadow-yellow-500/30 hover:brightness-110 cursor-pointer";
-                        content = i; // Show number when game over
+                        content = i; 
                     } else {
-                        // Standard Green while playing
                         classes += "bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 cursor-pointer";
-                        content = '✓'; // Show tick while playing
+                        content = '✓'; 
                     }
                     onClick = `onclick="openDay(${i})"`;
                 } else if (isFailed) {
                     tag = "button";
                     classes += "bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-700 cursor-pointer";
                     if (!isGameOver) {
-                        content = '✕'; // Show cross while playing, number if game over
+                        content = '✕'; 
                     }
                     onClick = `onclick="openDay(${i})"`;
                 } else if (isFuture) {
@@ -263,11 +260,10 @@
             let headerSubtitle = "Log your daily progress below.";
             
             if (isGameOver) {
-                headerTitle = isPerfect ? "Challenge Complete 🏆" : "Challenge Finished 🏁";
+                headerTitle = isPerfect ? "Challenge Complete" : "Challenge Finished";
                 headerSubtitle = isPerfect ? "You made it to the end." : "You pushed through to the end.";
             }
             
-            // Dynamic styling based on completion
             const titleClass = isGameOver ? "bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent" : "text-slate-950";
             const borderClass = isGameOver ? "border-2 border-yellow-400/50 shadow-yellow-500/20 ring-4 ring-yellow-400/10" : "border border-slate-200 shadow-xl";
 
@@ -377,10 +373,10 @@
                     <div class="glass p-6 rounded-3xl mb-10 shadow-xl space-y-4 border border-slate-200">
                         <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4">Non-Negotiables</h3>
                         ${state.tasks.map((t, i) => `
-                            <div class="bg-slate-50 p-4 rounded-2xl flex items-center gap-4 border border-slate-200">
-                                <input type="checkbox" id="task-${i}" ${checkedTasks[i] ? 'checked' : ''} onchange="toggleTask(${i}, this.checked)" class="daily-check w-6 h-6 rounded bg-white border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
-                                <label for="task-${i}" class="text-sm font-bold text-slate-950 cursor-pointer select-none">${t}</label>
-                            </div>
+                            <label for="task-${i}" class="bg-slate-50 p-4 rounded-2xl flex items-center gap-4 border border-slate-200 cursor-pointer hover:bg-slate-100 transition shadow-sm select-none">
+                                <input type="checkbox" id="task-${i}" ${checkedTasks[i] ? 'checked' : ''} onchange="toggleTask(${i}, this.checked)" class="daily-check shrink-0 w-6 h-6 rounded bg-white border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                                <span class="task-text text-sm font-bold text-slate-950">${t}</span>
+                            </label>
                         `).join('')}
                     </div>
 
@@ -392,13 +388,11 @@
             `;
         }
 
-        // NEW: Victory Screen Render
         function renderVictory(root) {
             let totalWater = 0;
             let totalMeals = 0;
             let totalCals = 0;
 
-            // Determine if perfect or partial finish
             const isPerfect = state.completedDays.length === 75;
             const completedCount = state.completedDays.length;
 
@@ -406,7 +400,6 @@
             const vSubtitle = isPerfect ? "75 Days of Unbreakable Discipline." : "You pushed through to the end. Be proud of the work.";
             const scoreColor = isPerfect ? "text-green-600" : "text-yellow-600";
 
-            // Tally up lifetime stats
             for (let day in state.metrics) {
                 const dayMetrics = state.metrics[day];
                 if (dayMetrics.waterLogs) {
@@ -453,7 +446,7 @@
                         <p class="mt-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">Screenshot to share your victory!</p>
                     </div>
 
-                    <button onclick="fireVictoryConfetti()" class="text-yellow-600 hover:bg-yellow-50 text-[10px] font-black uppercase tracking-[0.1em] transition border border-yellow-200 bg-yellow-50/50 px-6 py-3 rounded-xl mb-12 shadow-sm">Celebrate Again 🎉</button>
+                    <button onclick="fireVictoryConfetti()" class="text-yellow-600 hover:bg-yellow-50 text-[10px] font-black uppercase tracking-[0.1em] transition border border-yellow-200 bg-yellow-50/50 px-6 py-3 rounded-xl mb-12 shadow-sm">Celebrate Again</button>
                 </div>
             `;
         }
@@ -574,7 +567,6 @@
             
             if (!state.completedDays.includes(state.viewingDay)) state.completedDays.push(state.viewingDay);
             
-            // Check for Game Over (reached past day 75)
             if (getActiveDay() > 75) {
                 nav('victory');
                 fireVictoryConfetti();
@@ -591,7 +583,6 @@
                 state.completedDays = state.completedDays.filter(d => d !== state.viewingDay);
                 if (!state.incompleteDays.includes(state.viewingDay)) state.incompleteDays.push(state.viewingDay);
                 
-                // Check for Game Over
                 if (getActiveDay() > 75) {
                     nav('victory');
                     fireVictoryConfetti();
