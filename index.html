@@ -5,41 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>75 Hard Challenge</title>
     
-    <!-- THE APP ICON STUFF -->
+    <!-- PWA & Meta -->
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
-    
-    <!-- MAKES IT FEEL LIKE A NATIVE APP -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="mobile-web-app-capable" content="yes">
 
+    <!-- Dependencies & Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         
+        /* Globals & overrides */
         html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         body { background-color: #ffffff; color: #0f172a; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+        
+        /* UI Components */
         .glass { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04); }
         .grid-box { aspect-ratio: 1/1; border-radius: 6px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; transition: all 0.2s; }
+        
+        /* Input styling */
         input[type="checkbox"]:checked + label { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        
-        /* Utility classes for the backup modal */
         #backupModal textarea { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen flex justify-center pb-20">
+    <!-- Root mount -->
     <div id="app" class="w-full max-w-xl"></div>
     
-    <!-- Backup/Restore Modal (Smart Version) -->
+    <!-- Modals -->
     <div id="backupModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-8 shadow-2xl w-full max-w-lg border border-slate-200">
             <h4 id="modalTitle" class="text-xl font-black italic uppercase text-slate-950 mb-1">Data Lifeline</h4>
             <p id="modalDesc" class="text-slate-600 text-xs mb-6">Text this code to yourself to backup progress, or paste a code to restore.</p>
             
-            <!-- COPY SECTION (Hidden on Setup Page) -->
             <div id="copySection">
                 <textarea id="backupCodeDisplay" readonly class="w-full h-40 bg-slate-50 border border-slate-200 rounded-xl p-4 text-[10px] font-mono text-slate-700 mb-6 select-all focus:outline-none focus:border-slate-300"></textarea>
                 
@@ -51,20 +53,20 @@
                 <div id="restoreDivider" class="border-t border-slate-100 mt-8 pt-8"></div>
             </div>
             
-            <!-- RESTORE SECTION (Always visible when modal is open) -->
             <div id="restoreSection">
                 <p id="restoreTitle" class="text-[10px] text-slate-500 font-bold uppercase mb-2">Restore Progress</p>
                 <div class="flex gap-2">
                     <input type="text" id="restoreInput" placeholder="Paste your backup code here..." class="flex-1 bg-white border border-slate-300 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500">
                     <button onclick="restoreData()" class="py-3 px-6 bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase rounded-xl transition">Restore</button>
                 </div>
-                <!-- Cancel button specifically for the restore-only view -->
                 <button id="restoreOnlyClose" onclick="closeBackupModal()" class="hidden w-full mt-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-black uppercase rounded-xl transition">Cancel</button>
             </div>
         </div>
     </div>
 
+    <!-- Core App Logic -->
     <script>
+        // Config defaults
         const DEFAULT_TASKS = [
             "Take a daily progress pic",
             "1st 45 minute workout",
@@ -73,6 +75,7 @@
             "No cheat meals or alcohol"
         ];
 
+        // Init state
         let state = JSON.parse(localStorage.getItem('75hard_state')) || {
             name: "",
             waterGoal: 4000, 
@@ -87,6 +90,7 @@
             view: 'setup' 
         };
 
+        // State sanitization for backwards compatibility
         if (!state.incompleteDays) state.incompleteDays = [];
         if (!state.metrics) state.metrics = {};
         if (!state.waterGoal) state.waterGoal = 4000;
@@ -94,6 +98,7 @@
         
         state.editingRules = false;
 
+        // Helpers
         function getActiveDay() {
             if (state.completedDays.length === 0 && state.incompleteDays.length === 0) return 1;
             return Math.max(0, ...state.completedDays, ...state.incompleteDays) + 1;
@@ -108,6 +113,7 @@
             render();
         }
 
+        // Router / Main Render
         function render() {
             const root = document.getElementById('app');
             if (state.view === 'setup') renderSetup(root);
@@ -115,6 +121,7 @@
             else if (state.view === 'daily') renderDaily(root);
         }
 
+        // Views
         function renderSetup(root) {
             let tasksHtml = '';
 
@@ -175,7 +182,6 @@
                             ${state.editingRules ? "Done Editing" : "Edit the non-negotiables"}
                         </button>
                         
-                        <!-- Calls the Restore-Only mode of the modal -->
                         <button onclick="openBackupModal('restore-only')" class="text-slate-400 hover:text-slate-600 text-[9px] font-black uppercase tracking-[0.1em] transition border border-slate-200 px-3 py-1.5 rounded-lg">Restore Previous Save</button>
                     </div>
                 </div>
@@ -236,10 +242,8 @@
                     </div>
 
                     <div class="mt-12 text-center flex flex-col items-center gap-6">
-                        <!-- Upgraded Restart Button -->
                         <button onclick="hardReset()" class="w-full max-w-xs border border-red-200 bg-white hover:bg-red-50 text-red-600 px-6 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-sm">Restart & Change Rules</button>
                         
-                        <!-- Calls the Full mode of the modal -->
                         <button onclick="openBackupModal('full')" class="text-slate-400 hover:text-slate-600 text-[9px] font-black uppercase tracking-[0.1em] transition border border-slate-200 px-3 py-1.5 rounded-lg">Backup / Restore Progress</button>
                     </div>
                 </div>
@@ -332,6 +336,7 @@
             `;
         }
 
+        // Navigation
         function nav(view) {
             state.view = view;
             window.scrollTo(0, 0);
@@ -343,6 +348,7 @@
             nav('daily');
         }
 
+        // Metrics logic
         function ensureMetricsExist() {
             if (!state.metrics[state.viewingDay]) {
                 state.metrics[state.viewingDay] = { waterLogs: [], food: [], checkedTasks: [] };
@@ -396,6 +402,7 @@
             save();
         }
 
+        // Setup logic
         function syncSetupForm() {
             const nameEl = document.getElementById('userName');
             const waterEl = document.getElementById('setupWater');
@@ -470,7 +477,7 @@
             }
         }
         
-        // --- SMART BACKUP & RESTORE ---
+        // Data management (Backup/Restore)
         function openBackupModal(mode) {
             if (state.view === 'setup') {
                 syncSetupForm();
@@ -487,14 +494,12 @@
             restoreIn.value = ""; 
             
             if (mode === 'restore-only') {
-                // Setup Page Mode: Just Restore
                 copySec.classList.add('hidden');
                 restoreOnlyClose.classList.remove('hidden');
                 title.innerText = "RESTORE SAVE";
                 desc.innerText = "Paste your backup code below to pick up exactly where you left off.";
                 restoreTitle.classList.add('hidden'); 
             } else {
-                // Grid Page Mode: Full Backup & Restore
                 const dataString = "75HARD-v1|" + btoa(JSON.stringify(state));
                 codeEl.value = dataString;
                 copySec.classList.remove('hidden');
@@ -550,11 +555,12 @@
 
         render();
 
+        // PWA init
         if ('serviceWorker' in navigator) {
           window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js')
-              .then(reg => console.log('Service Worker registered!', reg))
-              .catch(err => console.log('Service Worker registration failed: ', err));
+              .then(reg => console.log('SW registered', reg))
+              .catch(err => console.log('SW failed', err));
           });
         }
     </script>
