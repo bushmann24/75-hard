@@ -105,7 +105,7 @@
 
         if (state.locked && state.view === 'setup') {
             // Check if they already won so we load the right view on refresh
-            if (state.completedDays.length === 75) {
+            if (getActiveDay() > 75) {
                 state.view = 'victory';
             } else {
                 state.view = 'grid';
@@ -213,13 +213,15 @@
 
         function renderGrid(root) {
             const activeDay = getActiveDay();
-            const isVictory = state.completedDays.length === 75; 
+            const isGameOver = activeDay > 75;
+            const isPerfect = state.completedDays.length === 75;
+            
             let gridHtml = '';
             
             for (let i = 1; i <= 75; i++) {
                 const isDone = state.completedDays.includes(i);
                 const isFailed = state.incompleteDays.includes(i);
-                const isActive = i === activeDay && !isVictory;
+                const isActive = i === activeDay && !isGameOver;
                 const isFuture = i > activeDay;
                 
                 let classes = "grid-box ";
@@ -233,19 +235,22 @@
                     onClick = `onclick="openDay(${i})"`;
                 } else if (isDone) {
                     tag = "button";
-                    if (isVictory) {
-                        // Golden Grid Edition
+                    if (isGameOver) {
+                        // Golden Grid Edition for completed days at the end
                         classes += "bg-gradient-to-br from-yellow-400 to-yellow-500 border-yellow-500 text-yellow-950 shadow-md shadow-yellow-500/30 hover:brightness-110 cursor-pointer";
+                        content = i; // Show number when game over
                     } else {
-                        // Standard Green
+                        // Standard Green while playing
                         classes += "bg-green-500 border-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 cursor-pointer";
+                        content = '✓'; // Show tick while playing
                     }
-                    content = '✓';
                     onClick = `onclick="openDay(${i})"`;
                 } else if (isFailed) {
                     tag = "button";
                     classes += "bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-700 cursor-pointer";
-                    content = '✕';
+                    if (!isGameOver) {
+                        content = '✕'; // Show cross while playing, number if game over
+                    }
                     onClick = `onclick="openDay(${i})"`;
                 } else if (isFuture) {
                     classes += "bg-slate-100 text-slate-400 opacity-40 cursor-not-allowed";
@@ -254,16 +259,21 @@
                 gridHtml += `<${tag} ${onClick} class="${classes}">${content}</${tag}>`;
             }
 
-            const headerTitle = isVictory ? "Challenge Complete 🏆" : `Day ${activeDay} of 75`;
-            const headerSubtitle = isVictory ? "You made it to the end." : "Log your daily progress below.";
+            let headerTitle = `Day ${activeDay} of 75`;
+            let headerSubtitle = "Log your daily progress below.";
+            
+            if (isGameOver) {
+                headerTitle = isPerfect ? "Challenge Complete 🏆" : "Challenge Finished 🏁";
+                headerSubtitle = isPerfect ? "You made it to the end." : "You pushed through to the end.";
+            }
             
             // Dynamic styling based on completion
-            const titleClass = isVictory ? "bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent" : "text-slate-950";
-            const borderClass = isVictory ? "border-2 border-yellow-400/50 shadow-yellow-500/20 ring-4 ring-yellow-400/10" : "border border-slate-200 shadow-xl";
+            const titleClass = isGameOver ? "bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent" : "text-slate-950";
+            const borderClass = isGameOver ? "border-2 border-yellow-400/50 shadow-yellow-500/20 ring-4 ring-yellow-400/10" : "border border-slate-200 shadow-xl";
 
             root.innerHTML = `
                 <div class="pt-8 animate-fade-in">
-                    ${isVictory ? `<button onclick="nav('victory')" class="bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase px-5 py-2.5 rounded-lg mb-6 tracking-widest transition shadow-md border border-slate-300">Back to Stats</button>` : ''}
+                    ${isGameOver ? `<button onclick="nav('victory')" class="bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase px-5 py-2.5 rounded-lg mb-6 tracking-widest transition shadow-md border border-slate-300">Back to Stats</button>` : ''}
                     
                     <div class="flex justify-between items-end mb-8">
                         <div>
@@ -282,7 +292,15 @@
                         
                         <button onclick="openBackupModal('full')" class="text-slate-400 hover:text-slate-600 text-[9px] font-black uppercase tracking-[0.1em] transition border border-slate-200 px-3 py-1.5 rounded-lg">Backup / Restore Progress</button>
                         
-                        ${!isVictory ? `<button onclick="devFinish74()" class="text-purple-600 hover:bg-purple-50 hover:text-purple-700 text-[9px] font-black uppercase tracking-[0.1em] transition border border-purple-200 bg-purple-50/50 px-4 py-2 rounded-lg mt-4">Dev Test: Finish 74</button>` : ''}
+                        ${!isGameOver ? `
+                        <div class="flex flex-col gap-2 w-full mt-4 items-center">
+                            <p class="text-[9px] text-slate-400 uppercase tracking-widest font-bold">Dev Controls</p>
+                            <div class="flex gap-2 w-full max-w-xs">
+                                <button onclick="devFinishPerfect()" class="flex-1 text-purple-600 hover:bg-purple-50 text-[9px] font-black uppercase tracking-[0.1em] transition border border-purple-200 bg-purple-50/50 px-3 py-2 rounded-lg">Test: Perfect</button>
+                                <button onclick="devFinishPartial()" class="flex-1 text-orange-600 hover:bg-orange-50 text-[9px] font-black uppercase tracking-[0.1em] transition border border-orange-200 bg-orange-50/50 px-3 py-2 rounded-lg">Test: Partial</button>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -380,6 +398,14 @@
             let totalMeals = 0;
             let totalCals = 0;
 
+            // Determine if perfect or partial finish
+            const isPerfect = state.completedDays.length === 75;
+            const completedCount = state.completedDays.length;
+
+            const vTitle = isPerfect ? "VICTORY" : "FINISHED";
+            const vSubtitle = isPerfect ? "75 Days of Unbreakable Discipline." : "You pushed through to the end. Be proud of the work.";
+            const scoreColor = isPerfect ? "text-green-600" : "text-yellow-600";
+
             // Tally up lifetime stats
             for (let day in state.metrics) {
                 const dayMetrics = state.metrics[day];
@@ -401,8 +427,8 @@
                     </div>
 
                     <div class="mb-10 mt-6">
-                        <h1 class="text-6xl font-black italic uppercase tracking-tight bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent drop-shadow-sm mb-2">VICTORY</h1>
-                        <p class="text-slate-800 text-sm font-bold uppercase tracking-widest">75 Days of Unbreakable Discipline.</p>
+                        <h1 class="text-6xl font-black italic uppercase tracking-tight bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent drop-shadow-sm mb-2">${vTitle}</h1>
+                        <p class="text-slate-800 text-sm font-bold uppercase tracking-widest">${vSubtitle}</p>
                     </div>
 
                     <div class="glass p-8 rounded-3xl w-full max-w-md shadow-2xl border-2 border-yellow-400/50 mb-8 relative overflow-hidden bg-gradient-to-b from-yellow-50 to-white">
@@ -420,7 +446,7 @@
                             </div>
                             <div class="flex justify-between items-center border-b border-yellow-200 pb-3">
                                 <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Days Conquered</span>
-                                <span class="text-lg font-black text-green-600">75 / 75</span>
+                                <span class="text-lg font-black ${scoreColor}">${completedCount} / 75</span>
                             </div>
                         </div>
 
@@ -548,8 +574,8 @@
             
             if (!state.completedDays.includes(state.viewingDay)) state.completedDays.push(state.viewingDay);
             
-            // Check for Victory!
-            if (state.completedDays.length === 75) {
+            // Check for Game Over (reached past day 75)
+            if (getActiveDay() > 75) {
                 nav('victory');
                 fireVictoryConfetti();
             } else {
@@ -564,7 +590,14 @@
                 state.metrics[state.viewingDay].checkedTasks = Array.from(checkboxes).map(cb => cb.checked);
                 state.completedDays = state.completedDays.filter(d => d !== state.viewingDay);
                 if (!state.incompleteDays.includes(state.viewingDay)) state.incompleteDays.push(state.viewingDay);
-                nav('grid');
+                
+                // Check for Game Over
+                if (getActiveDay() > 75) {
+                    nav('victory');
+                    fireVictoryConfetti();
+                } else {
+                    nav('grid');
+                }
             }
         }
 
@@ -582,20 +615,25 @@
             }
         }
 
-        // DEV TOOL: Auto-Complete Challenge to Day 74
-        function devFinish74() {
-            if (confirm("DEV TOOL: This will overwrite your current progress and mark the first 74 days as complete. Proceed?")) {
-                state.completedDays = [];
-                for (let i = 1; i <= 74; i++) {
-                    state.completedDays.push(i);
-                    // Add some dummy metrics so the victory screen has fun numbers
-                    state.metrics[i] = {
-                        waterLogs: [2000, 2000],
-                        food: [{name: "Chicken Rice", cals: 800}, {name: "Protein Shake", cals: 400}],
-                        checkedTasks: state.tasks.map(() => true)
-                    };
-                }
+        // DEV TOOLS
+        function devFinishPerfect() {
+            if (confirm("DEV TOOL: Set first 74 days as COMPLETE?")) {
+                state.completedDays = Array.from({length: 74}, (_, i) => i + 1);
                 state.incompleteDays = [];
+                for (let i = 1; i <= 74; i++) {
+                    state.metrics[i] = { waterLogs: [2000, 2000], food: [{name: "Chicken Rice", cals: 800}, {name: "Protein Shake", cals: 400}], checkedTasks: state.tasks.map(() => true) };
+                }
+                nav('grid');
+            }
+        }
+
+        function devFinishPartial() {
+            if (confirm("DEV TOOL: Set 70 days complete, 4 missed?")) {
+                state.completedDays = Array.from({length: 70}, (_, i) => i + 1);
+                state.incompleteDays = [71, 72, 73, 74];
+                for (let i = 1; i <= 74; i++) {
+                    state.metrics[i] = { waterLogs: [2000, 2000], food: [{name: "Chicken Rice", cals: 800}], checkedTasks: state.tasks.map(() => true) };
+                }
                 nav('grid');
             }
         }
@@ -665,7 +703,7 @@
                         state.editingRules = false; 
                         
                         // Fix view state on restore if they already won
-                        if (state.completedDays.length === 75) {
+                        if (getActiveDay() > 75) {
                             state.view = 'victory';
                         }
                         
