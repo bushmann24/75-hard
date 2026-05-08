@@ -163,6 +163,8 @@
                         <button onclick="toggleEditRules()" class="border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-md">
                             ${state.editingRules ? "Done Editing" : "Edit the non-negotiables"}
                         </button>
+                        
+                        <button onclick="openBackupModal()" class="text-slate-400 hover:text-slate-600 text-[9px] font-black uppercase tracking-[0.1em] transition border border-slate-200 px-3 py-1.5 rounded-lg">Restore Previous Save</button>
                     </div>
                 </div>
             `;
@@ -456,14 +458,16 @@
         
         // --- BACKUP & RESTORE UTILITIES ---
         function openBackupModal() {
-            syncSetupForm(); // Make sure latest goals are included
+            if (state.view === 'setup') {
+                syncSetupForm(); // Make sure any typed text isn't lost if they open/close the modal
+            }
+            
             const codeEl = document.getElementById('backupCodeDisplay');
             const restoreIn = document.getElementById('restoreInput');
             
-            // Prefix changed to 75HARD
             const dataString = "75HARD-v1|" + btoa(JSON.stringify(state));
             codeEl.value = dataString;
-            restoreIn.value = ""; // Clear restore input
+            restoreIn.value = ""; 
             
             document.getElementById('backupModal').classList.remove('hidden');
         }
@@ -483,7 +487,6 @@
             const input = document.getElementById('restoreInput').value.trim();
             if (!input) return;
             
-            // Supports both old 75C and new 75HARD prefixes for safety
             if (!input.startsWith("75HARD-v1|") && !input.startsWith("75C-v1|")) {
                 alert("Invalid backup code format.");
                 return;
@@ -494,11 +497,10 @@
                     const base64part = input.split('|')[1];
                     const decodedData = JSON.parse(atob(base64part));
                     
-                    // Basic validation to ensure it's the right type of data
                     if (decodedData && decodedData.tasks && Array.isArray(decodedData.completedDays)) {
                         state = decodedData;
-                        state.editingRules = false; // Reset editing state
-                        save(); // This saves and re-renders the current view
+                        state.editingRules = false; 
+                        save(); 
                         closeBackupModal();
                         alert("Progress restored successfully!");
                     } else {
