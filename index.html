@@ -41,7 +41,7 @@
             calorieGoal: 2500, 
             tasks: [...DEFAULT_TASKS],
             locked: false,
-            editingRules: false, // NEW: Controls the read-only vs edit view
+            editingRules: false, 
             completedDays: [],
             incompleteDays: [],
             metrics: {}, 
@@ -83,20 +83,20 @@
         function renderSetup(root) {
             let tasksHtml = '';
 
-            // The Read-Only List
+            // The Read-Only List (Now Centered without arrows)
             if (!state.editingRules) {
                 tasksHtml = `
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Your Non-Negotiables</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 text-center">Your Non-Negotiables</label>
                     <div class="space-y-2 mb-2">
                         ${state.tasks.map(t => `
-                            <div class="bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white font-bold flex items-center gap-3">
-                                <span class="text-blue-500">→</span> ${t}
+                            <div class="bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white font-bold text-center">
+                                ${t}
                             </div>
                         `).join('')}
                     </div>
                 `;
             } 
-            // The Edit Mode List
+            // The Edit Mode List (Kept Left-Aligned for easy editing)
             else {
                 tasksHtml = `
                     <label class="block text-xs font-bold text-blue-400 uppercase tracking-widest mb-4">Edit Your Rules</label>
@@ -140,7 +140,7 @@
                     
                     <div class="mt-6 text-center">
                         <button onclick="toggleEditRules()" class="text-slate-500 hover:text-white text-[10px] font-black uppercase tracking-widest transition border-b border-transparent hover:border-white pb-1">
-                            ${state.editingRules ? "Done Editing" : "Edit the list"}
+                            ${state.editingRules ? "Done Editing" : "Edit the non-negotiables"}
                         </button>
                     </div>
                 </div>
@@ -354,7 +354,7 @@
             if (isNaN(amount) || amount <= 0) return alert("Please enter a valid amount in ml.");
             ensureMetricsExist();
             state.metrics[state.viewingDay].waterLogs.push(amount);
-            amountEl.value = ""; // Clear input after adding
+            amountEl.value = ""; 
             save(); 
         }
 
@@ -372,8 +372,8 @@
             if (!name || isNaN(cals)) return alert("Please enter both a meal name and calories.");
             ensureMetricsExist();
             state.metrics[state.viewingDay].food.push({ name, cals });
-            nameEl.value = ""; // Clear input
-            calsEl.value = ""; // Clear input
+            nameEl.value = ""; 
+            calsEl.value = ""; 
             save(); 
         }
 
@@ -384,7 +384,6 @@
         }
 
         // Setup Handlers
-        // Helper to grab what they've typed so far before redrawing
         function syncSetupForm() {
             const nameEl = document.getElementById('userName');
             const waterEl = document.getElementById('setupWater');
@@ -427,7 +426,6 @@
 
         function submitDay() {
             const checkboxes = document.querySelectorAll('.daily-check');
-            // This ONLY checks the Non-Negotiable checkboxes
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
 
             if (!allChecked) {
@@ -466,7 +464,6 @@
                 state.completedDays = [];
                 state.incompleteDays = [];
                 state.metrics = {}; 
-                // Restore defaults!
                 state.tasks = [...DEFAULT_TASKS];
                 state.waterGoal = 4000;
                 state.calorieGoal = 2500;
