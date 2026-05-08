@@ -1,0 +1,15 @@
+{
+  "short_name": "75 Custom",
+  "name": "75 Custom Challenge",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff"
+}
