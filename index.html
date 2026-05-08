@@ -86,9 +86,7 @@
             incompleteDays: [],
             metrics: {}, 
             viewingDay: 1, 
-            view: 'setup',
-            remindersEnabled: false,
-            lastActiveDate: null // NEW: Tracks the actual calendar day you finished
+            view: 'setup'
         };
 
         // State sanitization for backwards compatibility
@@ -96,7 +94,6 @@
         if (!state.metrics) state.metrics = {};
         if (!state.waterGoal) state.waterGoal = 4000;
         if (!state.calorieGoal) state.calorieGoal = 2500;
-        if (typeof state.remindersEnabled === 'undefined') state.remindersEnabled = false;
         
         state.editingRules = false;
 
@@ -287,9 +284,6 @@
                     </div>
 
                     <div class="mt-12 text-center flex flex-col items-center gap-6">
-                        <button onclick="toggleReminders()" class="${state.remindersEnabled ? 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100' : 'text-slate-500 bg-slate-50 border-slate-200 hover:bg-slate-100'} w-full max-w-xs border px-6 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-sm">
-                            ${state.remindersEnabled ? '🔔 Notifications Set' : '🔕 Set Notifications'}
-                        </button>
 
                         <button onclick="hardReset()" class="w-full max-w-xs border border-red-200 bg-white hover:bg-red-50 text-red-600 px-6 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-sm">Restart & Change Rules</button>
                         
@@ -584,9 +578,6 @@
             
             if (!state.completedDays.includes(state.viewingDay)) state.completedDays.push(state.viewingDay);
             
-            // STAMP THE REAL-WORLD DATE
-            state.lastActiveDate = new Date().toLocaleDateString();
-
             if (getActiveDay() > 75) {
                 nav('victory');
                 fireVictoryConfetti();
@@ -603,9 +594,6 @@
                 state.completedDays = state.completedDays.filter(d => d !== state.viewingDay);
                 if (!state.incompleteDays.includes(state.viewingDay)) state.incompleteDays.push(state.viewingDay);
                 
-                // STAMP THE REAL-WORLD DATE
-                state.lastActiveDate = new Date().toLocaleDateString();
-
                 if (getActiveDay() > 75) {
                     nav('victory');
                     fireVictoryConfetti();
@@ -625,67 +613,9 @@
                 state.tasks = [...DEFAULT_TASKS];
                 state.waterGoal = 4000;
                 state.calorieGoal = 2500;
-                state.remindersEnabled = false;
-                state.lastActiveDate = null;
                 nav('setup');
             }
         }
-
-        // --- NOTIFICATIONS LOGIC ---
-        function toggleReminders() {
-            if (!state.remindersEnabled) {
-                if (!("Notification" in window)) {
-                    alert("This browser does not support desktop notification");
-                    return;
-                }
-                Notification.requestPermission().then(function (permission) {
-                    if (permission === "granted") {
-                        state.remindersEnabled = true;
-                        save();
-                        alert("Reminders activated! You will receive a ping every 2 hours between 10am and 10pm.");
-                    } else {
-                        alert("Please allow notifications in your device settings to use this feature.");
-                    }
-                });
-            } else {
-                state.remindersEnabled = false;
-                save();
-            }
-        }
-
-        function checkNotifications() {
-            if (!state.remindersEnabled || Notification.permission !== "granted") return;
-            
-            const activeDay = getActiveDay();
-            if (activeDay > 75) return; // Challenge is over
-
-            const now = new Date();
-            const todayStr = now.toLocaleDateString();
-
-            // NEW: If they already submitted a day on this real-world calendar day, stay quiet.
-            if (state.lastActiveDate === todayStr) return; 
-
-            const hour = now.getHours();
-            
-            // Between 10am (10) and 10pm (22), exactly on even hours
-            if (hour >= 10 && hour <= 22 && hour % 2 === 0) {
-                const notifKey = `notified_${todayStr}_${hour}`;
-                
-                // If we haven't sent a notification for this specific hour yet today
-                if (!localStorage.getItem(notifKey)) {
-                    new Notification("75 Hard Reminder", {
-                        body: "Time to check off some tasks! Keep your discipline today.",
-                        icon: "icon.png"
-                    });
-                    localStorage.setItem(notifKey, "true");
-                }
-            }
-        }
-
-        // Check for notifications every minute (60000ms)
-        setInterval(checkNotifications, 60000);
-        // Also check immediately when the app opens
-        checkNotifications();
 
         // DEV TOOLS
         function devFinishPerfect() {
