@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>75 Custom Challenge</title>
     
+    <!-- THE APP ICON STUFF -->
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
     
+    <!-- MAKES IT FEEL LIKE A NATIVE APP -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="mobile-web-app-capable" content="yes">
@@ -428,6 +430,15 @@
         }
 
         render();
+
+        // SERVICE WORKER REGISTRATION SCRIPT
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+              .then(reg => console.log('Service Worker registered!', reg))
+              .catch(err => console.log('Service Worker registration failed: ', err));
+          });
+        }
     </script>
 </body>
 </html>
