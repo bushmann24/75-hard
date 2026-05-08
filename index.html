@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>75 Hard Challenge</title>
     
-    <!-- PWA & Meta -->
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
@@ -13,7 +12,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="mobile-web-app-capable" content="yes">
 
-    <!-- Dependencies & Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -33,10 +31,8 @@
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen flex justify-center pb-20">
-    <!-- Root mount -->
     <div id="app" class="w-full max-w-xl"></div>
     
-    <!-- Modals -->
     <div id="backupModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-8 shadow-2xl w-full max-w-lg border border-slate-200">
             <h4 id="modalTitle" class="text-xl font-black italic uppercase text-slate-950 mb-1">Data Lifeline</h4>
@@ -64,7 +60,6 @@
         </div>
     </div>
 
-    <!-- Core App Logic -->
     <script>
         // Config defaults
         const DEFAULT_TASKS = [
@@ -246,8 +241,7 @@
                         
                         <button onclick="openBackupModal('full')" class="text-slate-400 hover:text-slate-600 text-[9px] font-black uppercase tracking-[0.1em] transition border border-slate-200 px-3 py-1.5 rounded-lg">Backup / Restore Progress</button>
                         
-                        <!-- DEV TOOL: TEMP FINISH BUTTON -->
-                        <button onclick="devFinishChallenge()" class="text-purple-600 hover:bg-purple-50 hover:text-purple-700 text-[9px] font-black uppercase tracking-[0.1em] transition border border-purple-200 bg-purple-50/50 px-4 py-2 rounded-lg mt-4">Dev Test: Finish 75</button>
+                        <button onclick="devFinish74()" class="text-purple-600 hover:bg-purple-50 hover:text-purple-700 text-[9px] font-black uppercase tracking-[0.1em] transition border border-purple-200 bg-purple-50/50 px-4 py-2 rounded-lg mt-4">Dev Test: Finish 74</button>
                     </div>
                 </div>
             `;
@@ -480,11 +474,11 @@
             }
         }
 
-        // DEV TOOL: Auto-Complete Challenge
-        function devFinishChallenge() {
-            if (confirm("DEV TOOL: This will overwrite your current progress and mark all 75 days as complete. Proceed?")) {
+        // DEV TOOL: Auto-Complete Challenge to Day 74
+        function devFinish74() {
+            if (confirm("DEV TOOL: This will overwrite your current progress and mark the first 74 days as complete. Proceed?")) {
                 state.completedDays = [];
-                for (let i = 1; i <= 75; i++) {
+                for (let i = 1; i <= 74; i++) {
                     state.completedDays.push(i);
                 }
                 state.incompleteDays = [];
