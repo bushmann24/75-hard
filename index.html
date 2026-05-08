@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>75 Custom Challenge</title>
+    
+    <!-- APP ICONS -->
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -34,6 +41,7 @@
             calorieGoal: 2500, 
             tasks: [...DEFAULT_TASKS],
             locked: false,
+            editingRules: false, // NEW: Controls the read-only vs edit view
             completedDays: [],
             incompleteDays: [],
             metrics: {}, 
@@ -45,6 +53,9 @@
         if (!state.metrics) state.metrics = {};
         if (!state.waterGoal) state.waterGoal = 4000;
         if (!state.calorieGoal) state.calorieGoal = 2500;
+        
+        // Force editing to false whenever we load the app fresh
+        state.editingRules = false;
 
         function getActiveDay() {
             if (state.completedDays.length === 0 && state.incompleteDays.length === 0) return 1;
@@ -70,17 +81,48 @@
 
         // 1. SETUP VIEW
         function renderSetup(root) {
+            let tasksHtml = '';
+
+            // The Read-Only List
+            if (!state.editingRules) {
+                tasksHtml = `
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Your Non-Negotiables</label>
+                    <div class="space-y-2 mb-2">
+                        ${state.tasks.map(t => `
+                            <div class="bg-white/5 border border-white/5 rounded-xl p-3 text-sm text-white font-bold flex items-center gap-3">
+                                <span class="text-blue-500">→</span> ${t}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } 
+            // The Edit Mode List
+            else {
+                tasksHtml = `
+                    <label class="block text-xs font-bold text-blue-400 uppercase tracking-widest mb-4">Edit Your Rules</label>
+                    <div id="task-list" class="space-y-3 mb-4">
+                        ${state.tasks.map((t, i) => `
+                            <div class="flex gap-2">
+                                <input type="text" onchange="updateTask(${i}, this.value)" value="${t}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500">
+                                <button onclick="removeTask(${i})" class="bg-red-500/10 text-red-500 px-4 rounded-xl font-bold hover:bg-red-500/20 transition">✕</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button onclick="addTask()" class="w-full py-3 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 font-bold uppercase text-xs hover:border-slate-500 hover:text-slate-300 transition mb-2">+ Add Custom Rule</button>
+                `;
+            }
+
             root.innerHTML = `
                 <div class="pt-8 animate-fade-in">
                     <h1 class="text-4xl font-black italic uppercase tracking-tight text-white mb-2">75 CUSTOM</h1>
-                    <p class="text-slate-400 text-sm font-bold uppercase tracking-widest mb-8">Define your rules.</p>
+                    <p class="text-slate-400 text-sm font-bold uppercase tracking-widest mb-8">Commit to the journey.</p>
                     
                     <div class="glass p-6 rounded-3xl mb-8 shadow-xl">
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Your Name</label>
                         <input type="text" id="userName" value="${state.name}" placeholder="Enter your name..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white font-bold mb-6 focus:outline-none focus:border-blue-500">
                         
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Daily Targets</label>
-                        <div class="flex gap-3 mb-6">
+                        <div class="flex gap-3 mb-8">
                             <div class="flex-1">
                                 <label class="block text-[10px] text-blue-400 font-bold uppercase mb-1">Water (ml)</label>
                                 <input type="number" id="setupWater" value="${state.waterGoal}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white font-bold focus:outline-none focus:border-blue-500">
@@ -91,19 +133,16 @@
                             </div>
                         </div>
 
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Your Non-Negotiables</label>
-                        <div id="task-list" class="space-y-3 mb-6">
-                            ${state.tasks.map((t, i) => `
-                                <div class="flex gap-2">
-                                    <input type="text" onchange="updateTask(${i}, this.value)" value="${t}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500">
-                                    <button onclick="removeTask(${i})" class="bg-red-500/10 text-red-500 px-4 rounded-xl font-bold hover:bg-red-500/20 transition">✕</button>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <button onclick="addTask()" class="w-full py-3 border-2 border-dashed border-slate-700 rounded-xl text-slate-500 font-bold uppercase text-xs hover:border-slate-500 hover:text-slate-300 transition">+ Add Custom Rule</button>
+                        ${tasksHtml}
                     </div>
 
                     <button onclick="lockIn()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl shadow-blue-600/20 transition active:scale-95">Lock It In</button>
+                    
+                    <div class="mt-6 text-center">
+                        <button onclick="toggleEditRules()" class="text-slate-500 hover:text-white text-[10px] font-black uppercase tracking-widest transition border-b border-transparent hover:border-white pb-1">
+                            ${state.editingRules ? "Done Editing" : "Edit the list"}
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -193,6 +232,7 @@
                     <h2 class="text-3xl font-black italic uppercase tracking-tight text-white mb-2">Day ${state.viewingDay}</h2>
                     <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Check them off as you go.</p>
 
+                    <!-- WATER TRACKER -->
                     <div class="glass p-6 rounded-3xl mb-4 shadow-xl">
                         <div class="flex justify-between items-end border-b border-white/10 pb-2 mb-4">
                             <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Water Log</h3>
@@ -218,6 +258,7 @@
                         </div>
                     </div>
 
+                    <!-- FOOD TRACKER -->
                     <div class="glass p-6 rounded-3xl mb-6 shadow-xl">
                         <div class="flex justify-between items-end border-b border-white/10 pb-2 mb-4">
                             <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Food Log</h3>
@@ -244,6 +285,7 @@
                         </div>
                     </div>
 
+                    <!-- CHECKLIST -->
                     <div class="glass p-6 rounded-3xl mb-10 shadow-xl space-y-4">
                         <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Non-Negotiables (Required to Complete Day)</h3>
                         ${state.tasks.map((t, i) => `
@@ -342,21 +384,42 @@
         }
 
         // Setup Handlers
+        // Helper to grab what they've typed so far before redrawing
+        function syncSetupForm() {
+            const nameEl = document.getElementById('userName');
+            const waterEl = document.getElementById('setupWater');
+            const calsEl = document.getElementById('setupCals');
+            if (nameEl) state.name = nameEl.value.trim();
+            if (waterEl) state.waterGoal = parseInt(waterEl.value) || 4000;
+            if (calsEl) state.calorieGoal = parseInt(calsEl.value) || 2500;
+        }
+
+        function toggleEditRules() {
+            syncSetupForm();
+            state.editingRules = !state.editingRules;
+            renderSetup(document.getElementById('app'));
+        }
+
         function updateTask(index, val) { state.tasks[index] = val; }
-        function removeTask(index) { state.tasks.splice(index, 1); renderSetup(document.getElementById('app')); }
-        function addTask() { state.tasks.push("New rule"); renderSetup(document.getElementById('app')); }
+        
+        function removeTask(index) { 
+            syncSetupForm();
+            state.tasks.splice(index, 1); 
+            renderSetup(document.getElementById('app')); 
+        }
+        
+        function addTask() { 
+            syncSetupForm();
+            state.tasks.push("New rule"); 
+            renderSetup(document.getElementById('app')); 
+        }
 
         function lockIn() {
-            const nameInput = document.getElementById('userName').value.trim();
-            const waterTarget = parseInt(document.getElementById('setupWater').value);
-            const calTarget = parseInt(document.getElementById('setupCals').value);
+            syncSetupForm();
 
             if (state.tasks.length === 0) return alert("You need at least one rule!");
             
             if (confirm("Once you start, you cannot change your rules. Ready to commit?")) {
-                state.name = nameInput;
-                state.waterGoal = isNaN(waterTarget) ? 4000 : waterTarget;
-                state.calorieGoal = isNaN(calTarget) ? 2500 : calTarget;
                 state.locked = true;
                 nav('grid');
             }
@@ -364,7 +427,7 @@
 
         function submitDay() {
             const checkboxes = document.querySelectorAll('.daily-check');
-            // This ONLY checks the Non-Negotiable checkboxes, it ignores the food/water completely
+            // This ONLY checks the Non-Negotiable checkboxes
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
 
             if (!allChecked) {
@@ -399,6 +462,7 @@
         function hardReset() {
             if (confirm("DANGER: This will wipe all your progress AND let you re-write your rules. Go back to Setup?")) {
                 state.locked = false;
+                state.editingRules = false;
                 state.completedDays = [];
                 state.incompleteDays = [];
                 state.metrics = {}; 
