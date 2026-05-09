@@ -28,6 +28,7 @@
         /* Input styling */
         input[type="checkbox"]:checked + .task-text { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; }
         #backupModal textarea { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         
         .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
@@ -67,9 +68,9 @@
     <div id="notifModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-8 shadow-2xl w-full max-w-lg border border-slate-200">
             <h4 class="text-xl font-black italic uppercase text-slate-950 mb-1">Alerts & Nudges</h4>
-            <p class="text-slate-600 text-xs mb-6">Set your notification preferences. The app will stop reminding you once your daily tasks are complete.</p>
+            <p class="text-slate-600 text-xs mb-6">Set your notification preferences. Reminders stop once today's tasks are done.</p>
 
-            <div class="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4">
+            <div class="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 shadow-inner">
                 <span class="text-sm font-bold text-slate-950">Enable Reminders</span>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" id="notifToggle" class="sr-only peer" onchange="handleNotifToggle(this.checked)">
@@ -77,17 +78,19 @@
                 </label>
             </div>
 
-            <div id="notifOptions" class="space-y-3 mb-8 transition-opacity duration-300">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">How often should we ping you?</label>
-                <select id="notifFreq" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer">
-                    <option value="1">Every 1 Hour (10am - 10pm)</option>
-                    <option value="2">Every 2 Hours (10am - 10pm)</option>
-                    <option value="3">Every 3 Hours (10am - 10pm)</option>
-                    <option value="mae">Morning, Afternoon & Evening (8am, 2pm, 8pm)</option>
-                </select>
+            <div id="notifOptions" class="transition-opacity duration-300">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Your Notification Times</label>
+                
+                <div id="notifTimesList" class="space-y-2 mb-4 max-h-40 overflow-y-auto">
+                    </div>
+
+                <div class="flex gap-2 mb-8">
+                    <input type="time" id="newNotifTime" class="flex-1 bg-white border border-slate-300 rounded-xl p-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500">
+                    <button onclick="addNotifTime()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-6 rounded-xl font-black transition active:scale-95">+</button>
+                </div>
             </div>
 
-            <div class="flex gap-3">
+            <div class="flex gap-3 mt-4 border-t border-slate-100 pt-6">
                 <button onclick="closeNotifModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-black uppercase rounded-xl transition">Cancel</button>
                 <button onclick="saveNotifSettings()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase rounded-xl transition shadow-md">Save Settings</button>
             </div>
@@ -118,7 +121,7 @@
             viewingDay: 1, 
             view: 'setup',
             remindersEnabled: false,
-            reminderFrequency: '2', // Default to 2 hours
+            customNotificationTimes: ['08:00', '14:00', '20:00'], // Default times
             lastActiveDate: null 
         };
 
@@ -128,7 +131,7 @@
         if (!state.waterGoal) state.waterGoal = 4000;
         if (!state.calorieGoal) state.calorieGoal = 2500;
         if (typeof state.remindersEnabled === 'undefined') state.remindersEnabled = false;
-        if (!state.reminderFrequency) state.reminderFrequency = '2';
+        if (!state.customNotificationTimes) state.customNotificationTimes = ['08:00', '14:00', '20:00'];
         
         state.editingRules = false;
 
@@ -668,16 +671,55 @@
                 state.waterGoal = 4000;
                 state.calorieGoal = 2500;
                 state.remindersEnabled = false;
-                state.reminderFrequency = '2';
+                state.customNotificationTimes = ['08:00', '14:00', '20:00'];
                 state.lastActiveDate = null;
                 nav('setup');
             }
         }
 
         // --- NOTIFICATIONS LOGIC & MODAL ---
+        
+        function formatTimeDisplay(time24) {
+            let [h, m] = time24.split(':');
+            let ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12; // Convert '00' to 12
+            return `${h}:${m} ${ampm}`;
+        }
+
+        function renderNotifTimes() {
+            const list = document.getElementById('notifTimesList');
+            if (state.customNotificationTimes.length === 0) {
+                list.innerHTML = `<p class="text-xs text-slate-400 italic p-2 text-center">No times set. You won't receive any nudges.</p>`;
+                return;
+            }
+            
+            list.innerHTML = state.customNotificationTimes.map((time, i) => `
+                <div class="flex justify-between items-center bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
+                    <span class="text-sm font-bold text-slate-900">${formatTimeDisplay(time)}</span>
+                    <button onclick="removeNotifTime(${i})" class="text-slate-400 hover:text-red-500 font-bold px-2 transition text-lg leading-none">&times;</button>
+                </div>
+            `).join('');
+        }
+
+        function addNotifTime() {
+            const input = document.getElementById('newNotifTime');
+            const val = input.value;
+            if (val && !state.customNotificationTimes.includes(val)) {
+                state.customNotificationTimes.push(val);
+                state.customNotificationTimes.sort(); // Keep chronological order
+                renderNotifTimes();
+            }
+            input.value = '';
+        }
+
+        function removeNotifTime(index) {
+            state.customNotificationTimes.splice(index, 1);
+            renderNotifTimes();
+        }
+
         function openNotifModal() {
             document.getElementById('notifToggle').checked = state.remindersEnabled;
-            document.getElementById('notifFreq').value = state.reminderFrequency || '2';
+            renderNotifTimes();
             
             const optionsDiv = document.getElementById('notifOptions');
             if (state.remindersEnabled) {
@@ -719,7 +761,6 @@
 
         function saveNotifSettings() {
             state.remindersEnabled = document.getElementById('notifToggle').checked;
-            state.reminderFrequency = document.getElementById('notifFreq').value;
             save(); // This re-renders the grid, updating the bell icon colour automatically
             closeNotifModal();
         }
@@ -736,26 +777,16 @@
             // If they already submitted a day on this calendar day, stay quiet.
             if (state.lastActiveDate === todayStr) return; 
 
-            const hour = now.getHours();
-            const freq = state.reminderFrequency || '2';
-            let shouldNotify = false;
+            // Get current time formatted as "HH:MM" (e.g. "08:00", "14:30")
+            const currentHour = now.getHours().toString().padStart(2, '0');
+            const currentMin = now.getMinutes().toString().padStart(2, '0');
+            const currentTimeStr = `${currentHour}:${currentMin}`;
 
-            // Frequency logic
-            if (freq === 'mae') {
-                // Morning (8am), Afternoon (2pm/14), Evening (8pm/20)
-                if (hour === 8 || hour === 14 || hour === 20) shouldNotify = true;
-            } else {
-                // 1, 2, or 3 hours (Between 10am and 10pm)
-                const f = parseInt(freq);
-                if (hour >= 10 && hour <= 22 && ((hour - 10) % f === 0)) {
-                    shouldNotify = true;
-                }
-            }
-            
-            if (shouldNotify) {
-                const notifKey = `notified_${todayStr}_${hour}`;
+            // Check if current exact minute matches any of their saved times
+            if (state.customNotificationTimes.includes(currentTimeStr)) {
+                const notifKey = `notified_${todayStr}_${currentTimeStr}`;
                 
-                // If we haven't sent a notification for this specific hour yet today
+                // If we haven't sent a notification for this specific minute today
                 if (!localStorage.getItem(notifKey)) {
                     new Notification("75 Hard Reminder", {
                         body: "Time to check off some tasks! Keep your discipline today.",
@@ -768,9 +799,7 @@
 
         // Check for notifications every minute (60000ms)
         setInterval(checkNotifications, 60000);
-        // Also check immediately when the app opens
-        checkNotifications();
-
+        
         // DEV TOOLS
         function devFinishPerfect() {
             if (confirm("DEV TOOL: Set first 74 days as COMPLETE?")) {
