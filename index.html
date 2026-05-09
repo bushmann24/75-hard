@@ -28,7 +28,6 @@
         /* Input styling */
         input[type="checkbox"]:checked + .task-text { text-decoration: line-through; opacity: 0.4; color: #94a3b8; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; }
         #backupModal textarea { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         
         .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
@@ -65,38 +64,6 @@
         </div>
     </div>
 
-    <div id="notifModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-8 shadow-2xl w-full max-w-lg border border-slate-200">
-            <h4 class="text-xl font-black italic uppercase text-slate-950 mb-1">Alerts & Nudges</h4>
-            <p class="text-slate-600 text-xs mb-6">Set your notification preferences. Reminders stop once today's tasks are done.</p>
-
-            <div class="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 shadow-inner">
-                <span class="text-sm font-bold text-slate-950">Enable Reminders</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="notifToggle" class="sr-only peer" onchange="handleNotifToggle(this.checked)">
-                  <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-            </div>
-
-            <div id="notifOptions" class="transition-opacity duration-300">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Your Notification Times</label>
-                
-                <div id="notifTimesList" class="space-y-2 mb-4 max-h-40 overflow-y-auto">
-                    </div>
-
-                <div class="flex gap-2 mb-8">
-                    <input type="time" id="newNotifTime" class="flex-1 bg-white border border-slate-300 rounded-xl p-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500">
-                    <button onclick="addNotifTime()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-6 rounded-xl font-black transition active:scale-95">+</button>
-                </div>
-            </div>
-
-            <div class="flex gap-3 mt-4 border-t border-slate-100 pt-6">
-                <button onclick="closeNotifModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-black uppercase rounded-xl transition">Cancel</button>
-                <button onclick="saveNotifSettings()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase rounded-xl transition shadow-md">Save Settings</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         // Config defaults
         const DEFAULT_TASKS = [
@@ -119,10 +86,7 @@
             incompleteDays: [],
             metrics: {}, 
             viewingDay: 1, 
-            view: 'setup',
-            remindersEnabled: false,
-            customNotificationTimes: ['08:00', '14:00', '20:00'], // Default times
-            lastActiveDate: null 
+            view: 'setup'
         };
 
         // State sanitization for backwards compatibility
@@ -130,8 +94,6 @@
         if (!state.metrics) state.metrics = {};
         if (!state.waterGoal) state.waterGoal = 4000;
         if (!state.calorieGoal) state.calorieGoal = 2500;
-        if (typeof state.remindersEnabled === 'undefined') state.remindersEnabled = false;
-        if (!state.customNotificationTimes) state.customNotificationTimes = ['08:00', '14:00', '20:00'];
         
         state.editingRules = false;
 
@@ -305,11 +267,6 @@
             const titleClass = isGameOver ? "bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent" : "text-slate-950";
             const borderClass = isGameOver ? "border-2 border-yellow-400/50 shadow-yellow-500/20 ring-4 ring-yellow-400/10" : "border border-slate-200 shadow-xl";
 
-            // Determine Bell Button styles
-            const bellClass = state.remindersEnabled 
-                ? "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100" 
-                : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50";
-
             root.innerHTML = `
                 <div class="pt-8 animate-fade-in">
                     ${isGameOver ? `<button onclick="nav('victory')" class="bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase px-5 py-2.5 rounded-lg mb-6 tracking-widest transition shadow-md border border-slate-300">Back to Stats</button>` : ''}
@@ -320,14 +277,6 @@
                             <h1 class="text-3xl sm:text-4xl font-black italic uppercase tracking-tight leading-none pr-2 py-1 ${titleClass}">${headerTitle}</h1>
                             <p class="text-blue-600 text-xs font-bold mt-2">${headerSubtitle}</p>
                         </div>
-                        
-                        ${!isGameOver ? `
-                        <button onclick="openNotifModal()" class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center border transition shadow-sm ${bellClass}" title="Notification Settings">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                            </svg>
-                        </button>
-                        ` : ''}
                     </div>
 
                     <div class="glass p-6 rounded-3xl ${borderClass}">
@@ -629,9 +578,6 @@
             
             if (!state.completedDays.includes(state.viewingDay)) state.completedDays.push(state.viewingDay);
             
-            // STAMP THE REAL-WORLD DATE for notifications
-            state.lastActiveDate = new Date().toLocaleDateString();
-
             if (getActiveDay() > 75) {
                 nav('victory');
                 fireVictoryConfetti();
@@ -648,9 +594,6 @@
                 state.completedDays = state.completedDays.filter(d => d !== state.viewingDay);
                 if (!state.incompleteDays.includes(state.viewingDay)) state.incompleteDays.push(state.viewingDay);
                 
-                // STAMP THE REAL-WORLD DATE for notifications
-                state.lastActiveDate = new Date().toLocaleDateString();
-
                 if (getActiveDay() > 75) {
                     nav('victory');
                     fireVictoryConfetti();
@@ -670,143 +613,9 @@
                 state.tasks = [...DEFAULT_TASKS];
                 state.waterGoal = 4000;
                 state.calorieGoal = 2500;
-                state.remindersEnabled = false;
-                state.customNotificationTimes = ['08:00', '14:00', '20:00'];
-                state.lastActiveDate = null;
                 nav('setup');
             }
         }
-
-        // --- NOTIFICATIONS LOGIC & MODAL ---
-        
-        function formatTimeDisplay(time24) {
-            let [h, m] = time24.split(':');
-            let ampm = h >= 12 ? 'PM' : 'AM';
-            h = h % 12 || 12; // Convert '00' to 12
-            return `${h}:${m} ${ampm}`;
-        }
-
-        function renderNotifTimes() {
-            const list = document.getElementById('notifTimesList');
-            if (state.customNotificationTimes.length === 0) {
-                list.innerHTML = `<p class="text-xs text-slate-400 italic p-2 text-center">No times set. You won't receive any nudges.</p>`;
-                return;
-            }
-            
-            list.innerHTML = state.customNotificationTimes.map((time, i) => `
-                <div class="flex justify-between items-center bg-white border border-slate-200 p-3 rounded-xl shadow-sm">
-                    <span class="text-sm font-bold text-slate-900">${formatTimeDisplay(time)}</span>
-                    <button onclick="removeNotifTime(${i})" class="text-slate-400 hover:text-red-500 font-bold px-2 transition text-lg leading-none">&times;</button>
-                </div>
-            `).join('');
-        }
-
-        function addNotifTime() {
-            const input = document.getElementById('newNotifTime');
-            const val = input.value;
-            if (val && !state.customNotificationTimes.includes(val)) {
-                state.customNotificationTimes.push(val);
-                state.customNotificationTimes.sort(); // Keep chronological order
-                renderNotifTimes();
-            }
-            input.value = '';
-        }
-
-        function removeNotifTime(index) {
-            state.customNotificationTimes.splice(index, 1);
-            renderNotifTimes();
-        }
-
-        function openNotifModal() {
-            document.getElementById('notifToggle').checked = state.remindersEnabled;
-            renderNotifTimes();
-            
-            const optionsDiv = document.getElementById('notifOptions');
-            if (state.remindersEnabled) {
-                optionsDiv.classList.remove('opacity-50', 'pointer-events-none');
-            } else {
-                optionsDiv.classList.add('opacity-50', 'pointer-events-none');
-            }
-            
-            document.getElementById('notifModal').classList.remove('hidden');
-        }
-
-        function closeNotifModal() {
-            document.getElementById('notifModal').classList.add('hidden');
-        }
-
-        function handleNotifToggle(isChecked) {
-            const optionsDiv = document.getElementById('notifOptions');
-            const toggleBtn = document.getElementById('notifToggle');
-            
-            if (isChecked) {
-                if (!("Notification" in window)) {
-                    alert("This browser does not support desktop notifications.");
-                    toggleBtn.checked = false;
-                    return;
-                }
-                Notification.requestPermission().then(function (permission) {
-                    if (permission !== "granted") {
-                        alert("Please allow notifications in your device settings to use this feature.");
-                        toggleBtn.checked = false;
-                        optionsDiv.classList.add('opacity-50', 'pointer-events-none');
-                    } else {
-                        optionsDiv.classList.remove('opacity-50', 'pointer-events-none');
-                    }
-                });
-            } else {
-                optionsDiv.classList.add('opacity-50', 'pointer-events-none');
-            }
-        }
-
-        function saveNotifSettings() {
-            state.remindersEnabled = document.getElementById('notifToggle').checked;
-            save(); // This re-renders the grid, updating the bell icon colour automatically
-            closeNotifModal();
-        }
-
-        function checkNotifications() {
-            if (!state.remindersEnabled || Notification.permission !== "granted") return;
-            
-            const activeDay = getActiveDay();
-            if (activeDay > 75) return; // Challenge is over
-
-            const now = new Date();
-            const todayStr = now.toLocaleDateString();
-
-            // If they already submitted a day on this calendar day, stay quiet.
-            if (state.lastActiveDate === todayStr) return; 
-
-            // CATCH-UP LOGIC: Check all custom times
-            state.customNotificationTimes.forEach(timeStr => {
-                const [targetHour, targetMin] = timeStr.split(':').map(Number);
-                
-                // Create a date object for the target time TODAY
-                const targetTime = new Date();
-                targetTime.setHours(targetHour, targetMin, 0, 0);
-
-                // If the current time is past the target time...
-                if (now >= targetTime) {
-                    const notifKey = `notified_${todayStr}_${timeStr}`;
-                    
-                    // ...and we haven't sent this specific notification today yet
-                    if (!localStorage.getItem(notifKey)) {
-                        new Notification("75 Hard Reminder", {
-                            body: "Time to check off some tasks! Keep your discipline today.",
-                            icon: "icon.png"
-                        });
-                        // Mark it as sent so it doesn't spam you
-                        localStorage.setItem(notifKey, "true");
-                    }
-                }
-            });
-        }
-
-        // Check for notifications every minute (60000ms)
-        setInterval(checkNotifications, 60000);
-        // Run once immediately on load/focus
-        checkNotifications();
-        window.addEventListener('focus', checkNotifications);
 
         // DEV TOOLS
         function devFinishPerfect() {
