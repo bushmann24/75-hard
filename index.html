@@ -64,6 +64,36 @@
         </div>
     </div>
 
+    <div id="notifModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 shadow-2xl w-full max-w-lg border border-slate-200">
+            <h4 class="text-xl font-black italic uppercase text-slate-950 mb-1">Alerts & Nudges</h4>
+            <p class="text-slate-600 text-xs mb-6">Set your notification preferences. The app will stop reminding you once your daily tasks are complete.</p>
+
+            <div class="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4">
+                <span class="text-sm font-bold text-slate-950">Enable Reminders</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="notifToggle" class="sr-only peer" onchange="handleNotifToggle(this.checked)">
+                  <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+
+            <div id="notifOptions" class="space-y-3 mb-8 transition-opacity duration-300">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">How often should we ping you?</label>
+                <select id="notifFreq" class="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer">
+                    <option value="1">Every 1 Hour (10am - 10pm)</option>
+                    <option value="2">Every 2 Hours (10am - 10pm)</option>
+                    <option value="3">Every 3 Hours (10am - 10pm)</option>
+                    <option value="mae">Morning, Afternoon & Evening (8am, 2pm, 8pm)</option>
+                </select>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeNotifModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-black uppercase rounded-xl transition">Cancel</button>
+                <button onclick="saveNotifSettings()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase rounded-xl transition shadow-md">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Config defaults
         const DEFAULT_TASKS = [
@@ -86,7 +116,10 @@
             incompleteDays: [],
             metrics: {}, 
             viewingDay: 1, 
-            view: 'setup'
+            view: 'setup',
+            remindersEnabled: false,
+            reminderFrequency: '2', // Default to 2 hours
+            lastActiveDate: null 
         };
 
         // State sanitization for backwards compatibility
@@ -94,6 +127,8 @@
         if (!state.metrics) state.metrics = {};
         if (!state.waterGoal) state.waterGoal = 4000;
         if (!state.calorieGoal) state.calorieGoal = 2500;
+        if (typeof state.remindersEnabled === 'undefined') state.remindersEnabled = false;
+        if (!state.reminderFrequency) state.reminderFrequency = '2';
         
         state.editingRules = false;
 
@@ -267,16 +302,29 @@
             const titleClass = isGameOver ? "bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent" : "text-slate-950";
             const borderClass = isGameOver ? "border-2 border-yellow-400/50 shadow-yellow-500/20 ring-4 ring-yellow-400/10" : "border border-slate-200 shadow-xl";
 
+            // Determine Bell Button styles
+            const bellClass = state.remindersEnabled 
+                ? "bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100" 
+                : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50";
+
             root.innerHTML = `
                 <div class="pt-8 animate-fade-in">
                     ${isGameOver ? `<button onclick="nav('victory')" class="bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black uppercase px-5 py-2.5 rounded-lg mb-6 tracking-widest transition shadow-md border border-slate-300">Back to Stats</button>` : ''}
                     
-                    <div class="flex justify-between items-end mb-8">
+                    <div class="flex justify-between items-start mb-8">
                         <div>
                             <p class="text-slate-600 text-[10px] font-black uppercase tracking-widest mb-1">${state.name ? state.name + "'s" : "Your"} Journey</p>
                             <h1 class="text-3xl sm:text-4xl font-black italic uppercase tracking-tight leading-none pr-2 py-1 ${titleClass}">${headerTitle}</h1>
                             <p class="text-blue-600 text-xs font-bold mt-2">${headerSubtitle}</p>
                         </div>
+                        
+                        ${!isGameOver ? `
+                        <button onclick="openNotifModal()" class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center border transition shadow-sm ${bellClass}" title="Notification Settings">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                            </svg>
+                        </button>
+                        ` : ''}
                     </div>
 
                     <div class="glass p-6 rounded-3xl ${borderClass}">
@@ -578,6 +626,9 @@
             
             if (!state.completedDays.includes(state.viewingDay)) state.completedDays.push(state.viewingDay);
             
+            // STAMP THE REAL-WORLD DATE for notifications
+            state.lastActiveDate = new Date().toLocaleDateString();
+
             if (getActiveDay() > 75) {
                 nav('victory');
                 fireVictoryConfetti();
@@ -594,6 +645,9 @@
                 state.completedDays = state.completedDays.filter(d => d !== state.viewingDay);
                 if (!state.incompleteDays.includes(state.viewingDay)) state.incompleteDays.push(state.viewingDay);
                 
+                // STAMP THE REAL-WORLD DATE for notifications
+                state.lastActiveDate = new Date().toLocaleDateString();
+
                 if (getActiveDay() > 75) {
                     nav('victory');
                     fireVictoryConfetti();
@@ -613,9 +667,109 @@
                 state.tasks = [...DEFAULT_TASKS];
                 state.waterGoal = 4000;
                 state.calorieGoal = 2500;
+                state.remindersEnabled = false;
+                state.reminderFrequency = '2';
+                state.lastActiveDate = null;
                 nav('setup');
             }
         }
+
+        // --- NOTIFICATIONS LOGIC & MODAL ---
+        function openNotifModal() {
+            document.getElementById('notifToggle').checked = state.remindersEnabled;
+            document.getElementById('notifFreq').value = state.reminderFrequency || '2';
+            
+            const optionsDiv = document.getElementById('notifOptions');
+            if (state.remindersEnabled) {
+                optionsDiv.classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                optionsDiv.classList.add('opacity-50', 'pointer-events-none');
+            }
+            
+            document.getElementById('notifModal').classList.remove('hidden');
+        }
+
+        function closeNotifModal() {
+            document.getElementById('notifModal').classList.add('hidden');
+        }
+
+        function handleNotifToggle(isChecked) {
+            const optionsDiv = document.getElementById('notifOptions');
+            const toggleBtn = document.getElementById('notifToggle');
+            
+            if (isChecked) {
+                if (!("Notification" in window)) {
+                    alert("This browser does not support desktop notifications.");
+                    toggleBtn.checked = false;
+                    return;
+                }
+                Notification.requestPermission().then(function (permission) {
+                    if (permission !== "granted") {
+                        alert("Please allow notifications in your device settings to use this feature.");
+                        toggleBtn.checked = false;
+                        optionsDiv.classList.add('opacity-50', 'pointer-events-none');
+                    } else {
+                        optionsDiv.classList.remove('opacity-50', 'pointer-events-none');
+                    }
+                });
+            } else {
+                optionsDiv.classList.add('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        function saveNotifSettings() {
+            state.remindersEnabled = document.getElementById('notifToggle').checked;
+            state.reminderFrequency = document.getElementById('notifFreq').value;
+            save(); // This re-renders the grid, updating the bell icon colour automatically
+            closeNotifModal();
+        }
+
+        function checkNotifications() {
+            if (!state.remindersEnabled || Notification.permission !== "granted") return;
+            
+            const activeDay = getActiveDay();
+            if (activeDay > 75) return; // Challenge is over
+
+            const now = new Date();
+            const todayStr = now.toLocaleDateString();
+
+            // If they already submitted a day on this calendar day, stay quiet.
+            if (state.lastActiveDate === todayStr) return; 
+
+            const hour = now.getHours();
+            const freq = state.reminderFrequency || '2';
+            let shouldNotify = false;
+
+            // Frequency logic
+            if (freq === 'mae') {
+                // Morning (8am), Afternoon (2pm/14), Evening (8pm/20)
+                if (hour === 8 || hour === 14 || hour === 20) shouldNotify = true;
+            } else {
+                // 1, 2, or 3 hours (Between 10am and 10pm)
+                const f = parseInt(freq);
+                if (hour >= 10 && hour <= 22 && ((hour - 10) % f === 0)) {
+                    shouldNotify = true;
+                }
+            }
+            
+            if (shouldNotify) {
+                const notifKey = `notified_${todayStr}_${hour}`;
+                
+                // If we haven't sent a notification for this specific hour yet today
+                if (!localStorage.getItem(notifKey)) {
+                    new Notification("75 Hard Reminder", {
+                        body: "Time to check off some tasks! Keep your discipline today.",
+                        icon: "icon.png"
+                    });
+                    localStorage.setItem(notifKey, "true");
+                }
+            }
+        }
+
+        // Check for notifications every minute (60000ms)
+        setInterval(checkNotifications, 60000);
+        // Also check immediately when the app opens
+        checkNotifications();
 
         // DEV TOOLS
         function devFinishPerfect() {
