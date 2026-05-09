@@ -777,29 +777,37 @@
             // If they already submitted a day on this calendar day, stay quiet.
             if (state.lastActiveDate === todayStr) return; 
 
-            // Get current time formatted as "HH:MM" (e.g. "08:00", "14:30")
-            const currentHour = now.getHours().toString().padStart(2, '0');
-            const currentMin = now.getMinutes().toString().padStart(2, '0');
-            const currentTimeStr = `${currentHour}:${currentMin}`;
-
-            // Check if current exact minute matches any of their saved times
-            if (state.customNotificationTimes.includes(currentTimeStr)) {
-                const notifKey = `notified_${todayStr}_${currentTimeStr}`;
+            // CATCH-UP LOGIC: Check all custom times
+            state.customNotificationTimes.forEach(timeStr => {
+                const [targetHour, targetMin] = timeStr.split(':').map(Number);
                 
-                // If we haven't sent a notification for this specific minute today
-                if (!localStorage.getItem(notifKey)) {
-                    new Notification("75 Hard Reminder", {
-                        body: "Time to check off some tasks! Keep your discipline today.",
-                        icon: "icon.png"
-                    });
-                    localStorage.setItem(notifKey, "true");
+                // Create a date object for the target time TODAY
+                const targetTime = new Date();
+                targetTime.setHours(targetHour, targetMin, 0, 0);
+
+                // If the current time is past the target time...
+                if (now >= targetTime) {
+                    const notifKey = `notified_${todayStr}_${timeStr}`;
+                    
+                    // ...and we haven't sent this specific notification today yet
+                    if (!localStorage.getItem(notifKey)) {
+                        new Notification("75 Hard Reminder", {
+                            body: "Time to check off some tasks! Keep your discipline today.",
+                            icon: "icon.png"
+                        });
+                        // Mark it as sent so it doesn't spam you
+                        localStorage.setItem(notifKey, "true");
+                    }
                 }
-            }
+            });
         }
 
         // Check for notifications every minute (60000ms)
         setInterval(checkNotifications, 60000);
-        
+        // Run once immediately on load/focus
+        checkNotifications();
+        window.addEventListener('focus', checkNotifications);
+
         // DEV TOOLS
         function devFinishPerfect() {
             if (confirm("DEV TOOL: Set first 74 days as COMPLETE?")) {
